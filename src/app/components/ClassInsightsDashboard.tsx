@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { StudentListDialog } from './StudentListDialog';
-import { ArrowLeft, TrendingUp, TrendingDown, Users, Target, Award, AlertCircle } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Users, Target, Award, AlertCircle, Sparkles } from 'lucide-react';
 import { CadentLogo } from './CadentLogo';
 import { formatStudentName } from '../lib/utils';
+import { WorksheetGeneratorView } from './WorksheetGeneratorView';
 
 interface ClassInsightsDashboardProps {
   onBack: () => void;
@@ -14,7 +15,7 @@ interface ClassInsightsDashboardProps {
 }
 
 export function ClassInsightsDashboard({ onBack, classInfo }: ClassInsightsDashboardProps) {
-  const [selectedView, setSelectedView] = useState<'overview' | 'detailed'>('overview');
+  const [selectedView, setSelectedView] = useState<'overview' | 'worksheets'>('overview');
   const [studentListDialog, setStudentListDialog] = useState<{
     open: boolean;
     title: string;
@@ -205,6 +206,17 @@ export function ClassInsightsDashboard({ onBack, classInfo }: ClassInsightsDashb
     setStudentListDialog({ open: true, title, students, type });
   };
 
+  if (selectedView === 'worksheets') {
+    return (
+      <WorksheetGeneratorView
+        onBack={() => setSelectedView('overview')}
+        classInfo={classInfo}
+        learningObjectives={metrics?.learningObjectives ?? []}
+        grade="5"
+      />
+    );
+  }
+
   return (
     <>
     <div className="min-h-screen bg-gradient-to-br from-[#F7F5FC] to-[#EBE8F5] flex flex-col">
@@ -315,7 +327,17 @@ export function ClassInsightsDashboard({ onBack, classInfo }: ClassInsightsDashb
         {/* Learning Objectives */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Learning Objectives Mastery</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Learning Objectives Mastery</CardTitle>
+              <Button
+                size="sm"
+                onClick={() => setSelectedView('worksheets')}
+                className="gap-1.5 text-xs bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] text-white"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Worksheets
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {metrics.learningObjectives.map(obj => (
@@ -343,17 +365,26 @@ export function ClassInsightsDashboard({ onBack, classInfo }: ClassInsightsDashb
         </Card>
 
         {/* Insights Card */}
-        <Card className="bg-gradient-to-br from-blue-50 to-slate-50 border-2 border-blue-200">
+        <Card className="bg-gradient-to-br from-[#EBE8F5] to-[#F0EEF8] border-2 border-[#D4D0EE]">
           <CardContent className="p-4">
             <h3 className="font-semibold mb-2 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
+              <TrendingUp className="w-5 h-5 text-[#6B5FE4]" />
               Key Insights
             </h3>
-            <ul className="text-sm space-y-2 text-gray-700">
+            <ul className="text-sm space-y-2 text-gray-700 mb-4">
               <li>• Class performing above provincial average by {metrics.classAverage - metrics.provincialAverage} percentage points</li>
               <li>• {metrics.studentsExcelling} students ready for enrichment activities</li>
               <li>• Focus area: {metrics.learningObjectives.reduce((prev, curr) => prev.mastery < curr.mastery ? prev : curr).name}</li>
             </ul>
+            {metrics.learningObjectives.some(o => o.atRisk > 0) && (
+              <Button
+                onClick={() => setSelectedView('worksheets')}
+                className="w-full gap-2 bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] hover:from-[#1A1A40]/90 hover:to-[#6B5FE4]/90 text-white font-semibold"
+              >
+                <Sparkles className="w-4 h-4" />
+                Generate AI Support Worksheets
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

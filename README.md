@@ -1,7 +1,7 @@
 
-  # InsightEd_App
+  # LaurelInsight_App
 
-  This is a code bundle for InsightEd_App. The original project is available at https://www.figma.com/design/idFHjeUiEXgoYRIqHiGpK3/InsightEd_App.
+  This is a code bundle for LaurelInsight_App. The original project is available at https://www.figma.com/design/idFHjeUiEXgoYRIqHiGpK3/LaurelInsight_App.
 
   ## Running the code
 

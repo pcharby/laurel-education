@@ -23,7 +23,7 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
             <div className="flex justify-center mb-4">
               <CadentLogo height="xl" />
             </div>
-            <CardTitle className="text-2xl mb-1">Welcome to Laurel Insight</CardTitle>
+            <CardTitle className="text-2xl mb-1">Welcome to Laurel Education</CardTitle>
             <CardDescription className="text-sm italic text-[#6B5FE4]/80">
               Observation Intelligence for Human Development
             </CardDescription>

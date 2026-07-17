@@ -1,4 +1,4 @@
-import logoImage from '../../imports/LaurelLogoOnly.png';
+import logoImage from '../../imports/LaurelEducationLogo-1.png';
 
 interface LaurelLogoProps {
   height?: 'sm' | 'md' | 'lg' | 'xl';
@@ -19,7 +19,7 @@ export function LaurelLogo({ height = 'md', className = '', inverted = false }: 
     <div className={`${heightMap[height]} ${className}`}>
       <img
         src={logoImage}
-        alt="Laurel Insight"
+        alt="Laurel Education"
         className={`h-full w-auto object-contain ${inverted ? 'brightness-0 invert' : ''}`}
       />
     </div>
