@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Switch } from './ui/switch';
 import { ArrowLeft, Lock, Fingerprint, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 
 interface PasswordManagementProps {
   onBack: () => void;
@@ -28,7 +28,7 @@ export function PasswordManagement({ onBack }: PasswordManagementProps) {
             <Button  size="sm" onClick={onBack}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="md" showProductName />
+            <LaurelLogo height="md" showProductName />
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">

@@ -19,12 +19,9 @@ export function LaurelLogo({ height = 'md', className = '', inverted = false }: 
     <div className={`${heightMap[height]} ${className}`}>
       <img
         src={logoImage}
-        alt="Laurel Insight"
+        alt="Laurel Education"
         className={`h-full w-auto object-contain ${inverted ? 'brightness-0 invert' : ''}`}
       />
     </div>
   );
 }
-
-// Backward-compatible alias
-export const CadentLogo = LaurelLogo;

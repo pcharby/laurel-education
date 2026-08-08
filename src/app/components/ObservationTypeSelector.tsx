@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { FileText, Mic, Image as ImageIcon } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 
 interface ObservationTypeSelectorProps {
   onSelectType: (type: 'text' | 'audio' | 'image') => void;
@@ -12,7 +12,7 @@ export function ObservationTypeSelector({ onSelectType }: ObservationTypeSelecto
       <div className="w-full max-w-4xl">
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-3 mb-6">
-            <CadentLogo height="lg" />
+            <LaurelLogo height="lg" />
           </div>
           <p className="text-xl text-gray-700">Quick Observation Capture</p>
           <p className="text-gray-600 mt-2">Select how you'd like to record your observation</p>

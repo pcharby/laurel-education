@@ -5,7 +5,7 @@ import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { GraduationCap, CheckCircle, Loader2 } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 import { auth } from '../../firebase';
 import {
   signInWithEmailAndPassword,
@@ -74,9 +74,9 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center pb-4">
             <div className="flex justify-center mb-4">
-              <CadentLogo height="xl" />
+              <LaurelLogo height="xl" />
             </div>
-            <CardTitle className="text-2xl mb-1">Welcome to Laurel Insight</CardTitle>
+            <CardTitle className="text-2xl mb-1">Welcome to Laurel Education</CardTitle>
             <CardDescription className="text-sm italic text-[#6B5FE4]/80">
               Observation Intelligence for Human Development
             </CardDescription>
@@ -189,7 +189,7 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
       </div>
 
       <div className="text-center text-white/80 text-sm pb-4 space-y-1">
-        <p>© 2026 Laurel Insight. Observation Intelligence for Human Development.</p>
+        <p>© 2026 Laurel Education. Observation Intelligence for Human Development.</p>
         <p className="text-white/60 text-xs">Created by Paul Charbonneau</p>
       </div>
     </div>

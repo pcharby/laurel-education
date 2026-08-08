@@ -1,6 +1,6 @@
 import { Button } from './ui/button';
 import { FileText, Mic, Camera, ArrowLeft, BarChart3 } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 
 interface MobileObservationTypeSelectorProps {
   onSelectType: (type: 'text' | 'audio' | 'image') => void;
@@ -22,7 +22,7 @@ export function MobileObservationTypeSelector({
           <Button  size="sm" onClick={onBack} className="hover:bg-white/40">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <CadentLogo height="md" showProductName />
+          <LaurelLogo height="md" showProductName />
         </div>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">

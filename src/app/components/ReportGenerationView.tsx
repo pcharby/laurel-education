@@ -6,7 +6,7 @@ import { Badge } from './ui/badge';
 import { ArrowLeft, Copy, CheckCircle, Loader2, TrendingUp, BarChart } from 'lucide-react';
 import { Progress } from './ui/progress';
 import { toast } from 'sonner';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
 
 interface ReportGenerationViewProps {
@@ -57,7 +57,7 @@ export function ReportGenerationView({ student, onBack }: ReportGenerationViewPr
   if (isGenerating) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <CadentLogo height="md"  className="mb-6" />
+        <LaurelLogo height="md"  className="mb-6" />
         <Loader2 className="w-12 h-12 animate-spin text-[#6B5FE4] mb-4" />
         <p className="text-lg text-gray-700">Generating Report Card Commentary...</p>
         <p className="text-sm text-gray-500 mt-2">Analyzing observations across all subjects</p>
@@ -73,7 +73,7 @@ export function ReportGenerationView({ student, onBack }: ReportGenerationViewPr
             <Button  size="sm" onClick={onBack} className="text-white hover:bg-white/20">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="sm" inverted={true} showProductName />
+            <LaurelLogo height="sm" inverted={true} showProductName />
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs">

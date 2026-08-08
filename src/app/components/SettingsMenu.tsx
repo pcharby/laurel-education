@@ -1,7 +1,7 @@
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { ArrowLeft, Lock, BookOpen, Calendar } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 
 interface SettingsMenuProps {
   onBack: () => void;
@@ -43,7 +43,7 @@ export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPas
             <Button  size="sm" onClick={onBack} className="hover:bg-white/40">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="md" showProductName />
+            <LaurelLogo height="md" showProductName />
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
@@ -89,7 +89,7 @@ export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPas
       <div className="p-4 bg-white/80 backdrop-blur-sm border-t">
         <div className="text-center text-gray-600 text-xs">
           <p>Laurel Education v1.0.0</p>
-          <p className="mt-1">© 2026 Laurel Insight. All rights reserved.</p>
+          <p className="mt-1">© 2026 Laurel Education. All rights reserved.</p>
         </div>
       </div>
     </div>

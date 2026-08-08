@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { BookOpen, Users, Calculator, Beaker, BookText, Palette, LogOut, Settings } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 
 interface ClassSelectorProps {
   onSelectClass: (classInfo: { id: string; name: string; subject: string }) => void;
@@ -77,7 +77,7 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
           </div>
           <div className="text-left">
             <div className="text-xs text-gray-700">Riverside Elementary</div>
-            <CadentLogo height="md" showProductName />
+            <LaurelLogo height="md" showProductName />
           </div>
         </div>
         <h1 className="text-2xl font-semibold mb-2 text-gray-800">Welcome, Ms. Smith!</h1>

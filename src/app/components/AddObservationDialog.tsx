@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Observation } from '../lib/types';
 import { saveObservation } from '../lib/storage';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 import {
   Dialog,
   DialogContent,
@@ -261,7 +261,7 @@ export function AddObservationDialog({
       <DialogContent className="w-full max-w-lg max-h-[95vh] overflow-y-auto sm:max-h-screen">
         <DialogHeader style={{ backgroundColor: `${getTypeColor()}10` }} className="p-4 -m-6 mb-4 rounded-t-lg">
           <div className="flex items-center justify-between mb-2">
-            <CadentLogo height="sm" showProductName />
+            <LaurelLogo height="sm" showProductName />
             <div className="text-right text-xs text-gray-600">
               <div>Riverside Elementary</div>
             </div>

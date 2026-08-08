@@ -5,7 +5,7 @@ import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { StudentListDialog } from './StudentListDialog';
 import { ArrowLeft, TrendingUp, TrendingDown, Users, Target, Award, AlertCircle } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
 
 interface ClassInsightsDashboardProps {
@@ -214,7 +214,7 @@ export function ClassInsightsDashboard({ onBack, classInfo }: ClassInsightsDashb
             <Button  size="sm" onClick={onBack} className="text-white hover:bg-white/20">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="sm" inverted={true} showProductName />
+            <LaurelLogo height="sm" inverted={true} showProductName />
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs">

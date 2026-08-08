@@ -6,7 +6,7 @@ import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ArrowLeft, Search, UserCircle } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
 
 interface StudentSelectorProps {
@@ -68,7 +68,7 @@ export function StudentSelector({ onSelectStudent, onBack, observationType }: St
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
-          <CadentLogo height="md" showProductName />
+          <LaurelLogo height="md" showProductName />
           <div className="flex-1">
             <h1 className="text-3xl mb-1">Select Student</h1>
             <p className="text-gray-600">Recording {getTypeLabel()} observation</p>

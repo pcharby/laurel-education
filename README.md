@@ -1,7 +1,8 @@
 
-  # InsightEd_App
+  # Laurel Education
 
-  This is a code bundle for InsightEd_App. The original project is available at https://www.figma.com/design/idFHjeUiEXgoYRIqHiGpK3/InsightEd_App.
+  Laurel Education is a teacher-facing student assessment app for capturing
+  observations and generating report card commentary, backed by Firebase.
 
   ## Running the code
 

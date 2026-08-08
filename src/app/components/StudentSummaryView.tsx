@@ -4,7 +4,7 @@ import { formatStudentName } from '../lib/utils';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { ArrowLeft, Calculator, Beaker, BookText, TrendingUp, TrendingDown, Award, Target, Eye, FileText } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 import {
   Dialog,
   DialogContent,
@@ -63,7 +63,7 @@ export function StudentSummaryView({ student, onBack, onGenerateReport, onViewOb
             <Button  size="sm" onClick={onBack} className="text-white hover:bg-white/20">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="sm" inverted={true} showProductName />
+            <LaurelLogo height="sm" inverted={true} showProductName />
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs">
