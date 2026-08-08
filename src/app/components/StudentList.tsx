@@ -15,11 +15,11 @@ export function StudentList({ onSelectStudent, onAddStudent }: StudentListProps)
   const [students, setStudents] = useState<Student[]>([]);
 
   useEffect(() => {
-    setStudents(getStudents());
+    getStudents().then(setStudents);
   }, []);
 
   const refreshStudents = () => {
-    setStudents(getStudents());
+    getStudents().then(setStudents);
   };
 
   useEffect(() => {

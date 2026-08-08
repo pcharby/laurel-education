@@ -43,7 +43,7 @@ export function EvaluationDialog({ open, onClose, student }: EvaluationDialogPro
     setIsGenerating(true);
     setEvaluation(null);
 
-    const observations = getObservationsByStudent(student.id);
+    const observations = await getObservationsByStudent(student.id);
     const result = await generateMockEvaluation(observations, student.name);
 
     setEvaluation(result);
@@ -58,7 +58,7 @@ export function EvaluationDialog({ open, onClose, student }: EvaluationDialogPro
       areasForImprovement: result.areasForImprovement,
       date: new Date().toISOString(),
     };
-    saveEvaluation(newEvaluation);
+    await saveEvaluation(newEvaluation);
   };
 
   const handleCopy = () => {

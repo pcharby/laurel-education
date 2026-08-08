@@ -25,8 +25,9 @@ export function StudentDetail({
   const [filter, setFilter] = useState<string>('all');
 
   const loadObservations = () => {
-    const obs = getObservationsByStudent(student.id);
-    setObservations(obs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+    getObservationsByStudent(student.id).then(obs => {
+      setObservations(obs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+    });
   };
 
   useEffect(() => {
@@ -38,12 +39,13 @@ export function StudentDetail({
     return () => clearInterval(interval);
   }, [student.id]);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this observation?')) {
-      deleteObservation(id);
+      await deleteObservation(id);
       loadObservations();
     }
   };
+
 
   const filteredObservations = filter === 'all'
     ? observations

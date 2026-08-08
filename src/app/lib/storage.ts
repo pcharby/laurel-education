@@ -1,58 +1,62 @@
 import { Student, Observation, Evaluation } from './types';
-
-const STUDENTS_KEY = 'insighted_students';
-const OBSERVATIONS_KEY = 'insighted_observations';
-const EVALUATIONS_KEY = 'insighted_evaluations';
+import { db } from '../../firebase';
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  query,
+  where,
+} from 'firebase/firestore';
 
 // Students
-export const getStudents = (): Student[] => {
-  const data = localStorage.getItem(STUDENTS_KEY);
-  return data ? JSON.parse(data) : [];
+export const getStudents = async (): Promise<Student[]> => {
+  const snapshot = await getDocs(collection(db, 'students'));
+  return snapshot.docs.map(d => ({ ...(d.data() as Student), id: d.id }));
 };
 
-export const saveStudent = (student: Student): void => {
-  const students = getStudents();
-  students.push(student);
-  localStorage.setItem(STUDENTS_KEY, JSON.stringify(students));
+export const saveStudent = async (student: Student): Promise<void> => {
+  await addDoc(collection(db, 'students'), student);
 };
 
-export const getStudentById = (id: string): Student | undefined => {
-  return getStudents().find(s => s.id === id);
+export const getStudentById = async (id: string): Promise<Student | undefined> => {
+  const students = await getStudents();
+  return students.find(s => s.id === id);
 };
 
 // Observations
-export const getObservations = (): Observation[] => {
-  const data = localStorage.getItem(OBSERVATIONS_KEY);
-  return data ? JSON.parse(data) : [];
+export const getObservations = async (): Promise<Observation[]> => {
+  const snapshot = await getDocs(collection(db, 'observations'));
+  return snapshot.docs.map(d => ({ ...(d.data() as Observation), id: d.id }));
 };
 
-export const saveObservation = (observation: Observation): void => {
-  const observations = getObservations();
-  observations.push(observation);
-  localStorage.setItem(OBSERVATIONS_KEY, JSON.stringify(observations));
+export const saveObservation = async (observation: Observation): Promise<void> => {
+  await addDoc(collection(db, 'observations'), observation);
 };
 
-export const getObservationsByStudent = (studentId: string): Observation[] => {
-  return getObservations().filter(o => o.studentId === studentId);
+export const getObservationsByStudent = async (studentId: string): Promise<Observation[]> => {
+  const q = query(collection(db, 'observations'), where('studentId', '==', studentId));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(d => ({ ...(d.data() as Observation), id: d.id }));
 };
 
-export const deleteObservation = (id: string): void => {
-  const observations = getObservations().filter(o => o.id !== id);
-  localStorage.setItem(OBSERVATIONS_KEY, JSON.stringify(observations));
+export const deleteObservation = async (id: string): Promise<void> => {
+  await deleteDoc(doc(db, 'observations', id));
 };
 
 // Evaluations
-export const getEvaluations = (): Evaluation[] => {
-  const data = localStorage.getItem(EVALUATIONS_KEY);
-  return data ? JSON.parse(data) : [];
+export const getEvaluations = async (): Promise<Evaluation[]> => {
+  const snapshot = await getDocs(collection(db, 'evaluations'));
+  return snapshot.docs.map(d => ({ ...(d.data() as Evaluation), id: d.id }));
 };
 
-export const saveEvaluation = (evaluation: Evaluation): void => {
-  const evaluations = getEvaluations();
-  evaluations.push(evaluation);
-  localStorage.setItem(EVALUATIONS_KEY, JSON.stringify(evaluations));
+export const saveEvaluation = async (evaluation: Evaluation): Promise<void> => {
+  await addDoc(collection(db, 'evaluations'), evaluation);
 };
 
-export const getEvaluationsByStudent = (studentId: string): Evaluation[] => {
-  return getEvaluations().filter(e => e.studentId === studentId);
+export const getEvaluationsByStudent = async (studentId: string): Promise<Evaluation[]> => {
+  const q = query(collection(db, 'evaluations'), where('studentId', '==', studentId));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(d => ({ ...(d.data() as Evaluation), id: d.id }));
 };

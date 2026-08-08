@@ -25,7 +25,7 @@ export function AddStudentDialog({ open, onClose, onSuccess }: AddStudentDialogP
   const [grade, setGrade] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim()) {
       setError('Please enter student name');
       return;
@@ -34,8 +34,7 @@ export function AddStudentDialog({ open, onClose, onSuccess }: AddStudentDialogP
       setError('Please enter grade');
       return;
     }
-
-    const existingStudents = getStudents();
+    const existingStudents = await getStudents();
     const duplicate = existingStudents.find(
       s => s.name.toLowerCase() === name.trim().toLowerCase()
     );
@@ -52,7 +51,7 @@ export function AddStudentDialog({ open, onClose, onSuccess }: AddStudentDialogP
       createdAt: new Date().toISOString(),
     };
 
-    saveStudent(newStudent);
+    await saveStudent(newStudent);
     setName('');
     setGrade('');
     setError('');

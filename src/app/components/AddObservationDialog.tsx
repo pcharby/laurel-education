@@ -212,7 +212,7 @@ export function AddObservationDialog({
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!content.trim()) {
       setError('Please enter observation content');
       return;
@@ -228,7 +228,7 @@ export function AddObservationDialog({
       subject: subject || undefined,
     };
 
-    saveObservation(newObservation);
+    await saveObservation(newObservation);
 
     // Reset form
     setContent('');

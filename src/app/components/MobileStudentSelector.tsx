@@ -24,24 +24,25 @@ export function MobileStudentSelector({
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const stored = getStudents();
-    if (stored.length === 0) {
-      const mockStudents: Student[] = [
-        { id: '1', name: 'Emma Thompson', grade: '5', createdAt: new Date().toISOString() },
-        { id: '2', name: 'Liam Chen', grade: '5', createdAt: new Date().toISOString() },
-        { id: '3', name: 'Sophia Martinez', grade: '5', createdAt: new Date().toISOString() },
-        { id: '4', name: 'Noah Patel', grade: '5', createdAt: new Date().toISOString() },
-        { id: '5', name: 'Olivia Johnson', grade: '5', createdAt: new Date().toISOString() },
-        { id: '6', name: 'Ethan Williams', grade: '5', createdAt: new Date().toISOString() },
-        { id: '7', name: 'Ava Brown', grade: '5', createdAt: new Date().toISOString() },
-        { id: '8', name: 'Mason Davis', grade: '5', createdAt: new Date().toISOString() },
-        { id: '9', name: 'Isabella Garcia', grade: '5', createdAt: new Date().toISOString() },
-        { id: '10', name: 'James Wilson', grade: '5', createdAt: new Date().toISOString() },
-      ];
-      setStudents(mockStudents);
-    } else {
-      setStudents(stored);
-    }
+    getStudents().then(stored => {
+      if (stored.length === 0) {
+        const mockStudents: Student[] = [
+          { id: '1', name: 'Emma Thompson', grade: '5', createdAt: new Date().toISOString() },
+          { id: '2', name: 'Liam Chen', grade: '5', createdAt: new Date().toISOString() },
+          { id: '3', name: 'Sophia Martinez', grade: '5', createdAt: new Date().toISOString() },
+          { id: '4', name: 'Noah Patel', grade: '5', createdAt: new Date().toISOString() },
+          { id: '5', name: 'Olivia Johnson', grade: '5', createdAt: new Date().toISOString() },
+          { id: '6', name: 'Ethan Williams', grade: '5', createdAt: new Date().toISOString() },
+          { id: '7', name: 'Ava Brown', grade: '5', createdAt: new Date().toISOString() },
+          { id: '8', name: 'Mason Davis', grade: '5', createdAt: new Date().toISOString() },
+          { id: '9', name: 'Isabella Garcia', grade: '5', createdAt: new Date().toISOString() },
+          { id: '10', name: 'James Wilson', grade: '5', createdAt: new Date().toISOString() },
+        ];
+        setStudents(mockStudents);
+      } else {
+        setStudents(stored);
+      }
+    });
   }, []);
 
   const filteredStudents = students.filter(student =>
