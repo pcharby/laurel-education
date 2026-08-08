@@ -3,7 +3,9 @@ import { Student, Evaluation } from '../lib/types';
 import { formatStudentName } from '../lib/utils';
 import { getObservationsByStudent } from '../lib/storage';
 import { generateMockEvaluation } from '../lib/mock-ai';
+import { generateEvaluation as generateAIEvaluation } from '../lib/ai';
 import { saveEvaluation } from '../lib/storage';
+import { auth } from '../../firebase';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +17,7 @@ import {
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
+import { Alert, AlertDescription } from './ui/alert';
 import { Loader2, Sparkles, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,6 +35,7 @@ export function EvaluationDialog({ open, onClose, student }: EvaluationDialogPro
     areasForImprovement: string[];
   } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -42,23 +46,30 @@ export function EvaluationDialog({ open, onClose, student }: EvaluationDialogPro
   const generateEvaluation = async () => {
     setIsGenerating(true);
     setEvaluation(null);
+    setError('');
 
-    const observations = await getObservationsByStudent(student.id);
-    const result = await generateMockEvaluation(observations, student.name);
+    try {
+      const observations = await getObservationsByStudent(student.id);
+      const result = auth.currentUser?.isAnonymous
+        ? await generateMockEvaluation(observations, student.name)
+        : await generateAIEvaluation(observations, student.name);
 
-    setEvaluation(result);
-    setIsGenerating(false);
+      setEvaluation(result);
 
-    // Save to storage
-    const newEvaluation: Omit<Evaluation, 'teacherId'> = {
-      id: `eval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      studentId: student.id,
-      generatedText: result.summary,
-      strengths: result.strengths,
-      areasForImprovement: result.areasForImprovement,
-      date: new Date().toISOString(),
-    };
-    await saveEvaluation(newEvaluation);
+      const newEvaluation: Omit<Evaluation, 'teacherId'> = {
+        id: `eval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        studentId: student.id,
+        generatedText: result.summary,
+        strengths: result.strengths,
+        areasForImprovement: result.areasForImprovement,
+        date: new Date().toISOString(),
+      };
+      await saveEvaluation(newEvaluation);
+    } catch {
+      setError('Could not generate an evaluation right now. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCopy = () => {
@@ -102,6 +113,12 @@ ${evaluation.areasForImprovement.map((a, i) => `${i + 1}. ${a}`).join('\n')}
             <Loader2 className="w-12 h-12 animate-spin text-blue-500 mb-4" />
             <p className="text-gray-600">Analyzing observations and generating evaluation...</p>
             <p className="text-sm text-gray-400 mt-2">This may take a few seconds</p>
+          </div>
+        ) : error ? (
+          <div className="py-4">
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           </div>
         ) : evaluation ? (
           <div className="space-y-6">
@@ -167,6 +184,9 @@ ${evaluation.areasForImprovement.map((a, i) => `${i + 1}. ${a}`).join('\n')}
           <Button  onClick={onClose}>
             Close
           </Button>
+          {error && (
+            <Button onClick={generateEvaluation}>Try Again</Button>
+          )}
           {evaluation && (
             <>
               <Button  onClick={generateEvaluation}>
