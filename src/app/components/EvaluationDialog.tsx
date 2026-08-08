@@ -50,7 +50,7 @@ export function EvaluationDialog({ open, onClose, student }: EvaluationDialogPro
     setIsGenerating(false);
 
     // Save to storage
-    const newEvaluation: Evaluation = {
+    const newEvaluation: Omit<Evaluation, 'teacherId'> = {
       id: `eval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       studentId: student.id,
       generatedText: result.summary,

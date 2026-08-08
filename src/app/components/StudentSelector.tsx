@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Student } from '../lib/types';
 import { getStudents } from '../lib/storage';
+import { auth } from '../../firebase';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -20,17 +21,17 @@ export function StudentSelector({ onSelectStudent, onBack, observationType }: St
 
   useEffect(() => {
     getStudents().then(stored => {
-      if (stored.length === 0) {
-        // Load mock students for demo
+      if (stored.length === 0 && auth.currentUser?.isAnonymous) {
+        const demoTeacherId = auth.currentUser.uid;
         const mockStudents: Student[] = [
-          { id: '1', name: 'Emma Thompson', grade: '5', createdAt: new Date().toISOString() },
-          { id: '2', name: 'Liam Chen', grade: '5', createdAt: new Date().toISOString() },
-          { id: '3', name: 'Sophia Martinez', grade: '5', createdAt: new Date().toISOString() },
-          { id: '4', name: 'Noah Patel', grade: '5', createdAt: new Date().toISOString() },
-          { id: '5', name: 'Olivia Johnson', grade: '5', createdAt: new Date().toISOString() },
-          { id: '6', name: 'Ethan Williams', grade: '5', createdAt: new Date().toISOString() },
-          { id: '7', name: 'Ava Brown', grade: '5', createdAt: new Date().toISOString() },
-          { id: '8', name: 'Mason Davis', grade: '5', createdAt: new Date().toISOString() },
+          { id: '1', teacherId: demoTeacherId, name: 'Emma Thompson', grade: '5', createdAt: new Date().toISOString() },
+          { id: '2', teacherId: demoTeacherId, name: 'Liam Chen', grade: '5', createdAt: new Date().toISOString() },
+          { id: '3', teacherId: demoTeacherId, name: 'Sophia Martinez', grade: '5', createdAt: new Date().toISOString() },
+          { id: '4', teacherId: demoTeacherId, name: 'Noah Patel', grade: '5', createdAt: new Date().toISOString() },
+          { id: '5', teacherId: demoTeacherId, name: 'Olivia Johnson', grade: '5', createdAt: new Date().toISOString() },
+          { id: '6', teacherId: demoTeacherId, name: 'Ethan Williams', grade: '5', createdAt: new Date().toISOString() },
+          { id: '7', teacherId: demoTeacherId, name: 'Ava Brown', grade: '5', createdAt: new Date().toISOString() },
+          { id: '8', teacherId: demoTeacherId, name: 'Mason Davis', grade: '5', createdAt: new Date().toISOString() },
         ];
         setStudents(mockStudents);
       } else {

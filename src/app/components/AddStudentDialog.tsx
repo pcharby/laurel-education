@@ -44,7 +44,7 @@ export function AddStudentDialog({ open, onClose, onSuccess }: AddStudentDialogP
       return;
     }
 
-    const newStudent: Student = {
+    const newStudent: Omit<Student, 'teacherId'> = {
       id: `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: name.trim(),
       grade: grade.trim(),

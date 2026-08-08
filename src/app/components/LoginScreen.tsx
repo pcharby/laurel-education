@@ -3,17 +3,70 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { GraduationCap, CheckCircle } from 'lucide-react';
+import { Alert, AlertDescription } from './ui/alert';
+import { GraduationCap, CheckCircle, Loader2 } from 'lucide-react';
 import { CadentLogo } from './CadentLogo';
+import { auth } from '../../firebase';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from 'firebase/auth';
 
 interface LoginScreenProps {
   onLogin: () => void;
   onDemo: () => void;
 }
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  'auth/invalid-email': 'Please enter a valid email address.',
+  'auth/invalid-credential': 'Incorrect email or password.',
+  'auth/user-not-found': 'Incorrect email or password.',
+  'auth/wrong-password': 'Incorrect email or password.',
+  'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+  'auth/email-already-in-use': 'An account with this email already exists. Try signing in instead.',
+  'auth/weak-password': 'Password must be at least 6 characters.',
+  'auth/operation-not-allowed': 'Email/password sign-in is not enabled for this project yet.',
+};
+
 export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setError('');
+
+    if (!email.trim() || !password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+    if (mode === 'signup' && password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (mode === 'signup') {
+        await createUserWithEmailAndPassword(auth, email.trim(), password);
+      } else {
+        await signInWithEmailAndPassword(auth, email.trim(), password);
+      }
+      onLogin();
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? '';
+      setError(AUTH_ERROR_MESSAGES[code] ?? 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin');
+    setError('');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A40] via-[#2E2B6E] to-[#6B5FE4] flex flex-col p-4">
@@ -56,6 +109,12 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
             </div>
 
             <div className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -64,7 +123,9 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
                   placeholder="teacher@school.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                   className="h-11"
+                  disabled={loading}
                />
               </div>
 
@@ -76,16 +137,31 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                   className="h-11"
+                  disabled={loading}
                />
               </div>
 
               <Button
-                onClick={onLogin}
-                className="w-full h-11 bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] hover:from-[#1A1A40]/90 hover:to-[#6B5FE4]/90 font-semibold"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="w-full h-11 bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] hover:from-[#1A1A40]/90 hover:to-[#6B5FE4]/90 font-semibold gap-2"
               >
-                Sign In
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {mode === 'signup' ? 'Create Account' : 'Sign In'}
               </Button>
+
+              <button
+                type="button"
+                onClick={toggleMode}
+                disabled={loading}
+                className="w-full text-center text-sm text-[#6B5FE4] hover:underline"
+              >
+                {mode === 'signup'
+                  ? 'Already have an account? Sign In'
+                  : "Don't have an account? Create one"}
+              </button>
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -98,7 +174,7 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
 
               <Button
                 onClick={onDemo}
-                
+                disabled={loading}
                 className="w-full h-11 border-2 border-[#6B5FE4] hover:bg-[#EBE8F5] font-semibold"
               >
                 View Demo

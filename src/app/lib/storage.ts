@@ -1,5 +1,5 @@
 import { Student, Observation, Evaluation } from './types';
-import { db } from '../../firebase';
+import { auth, db } from '../../firebase';
 import {
   collection,
   addDoc,
@@ -10,14 +10,21 @@ import {
   where,
 } from 'firebase/firestore';
 
+const getTeacherId = (): string => {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('Not signed in');
+  return uid;
+};
+
 // Students
 export const getStudents = async (): Promise<Student[]> => {
-  const snapshot = await getDocs(collection(db, 'students'));
+  const q = query(collection(db, 'students'), where('teacherId', '==', getTeacherId()));
+  const snapshot = await getDocs(q);
   return snapshot.docs.map(d => ({ ...(d.data() as Student), id: d.id }));
 };
 
-export const saveStudent = async (student: Student): Promise<void> => {
-  await addDoc(collection(db, 'students'), student);
+export const saveStudent = async (student: Omit<Student, 'teacherId'>): Promise<void> => {
+  await addDoc(collection(db, 'students'), { ...student, teacherId: getTeacherId() });
 };
 
 export const getStudentById = async (id: string): Promise<Student | undefined> => {
@@ -27,16 +34,21 @@ export const getStudentById = async (id: string): Promise<Student | undefined> =
 
 // Observations
 export const getObservations = async (): Promise<Observation[]> => {
-  const snapshot = await getDocs(collection(db, 'observations'));
+  const q = query(collection(db, 'observations'), where('teacherId', '==', getTeacherId()));
+  const snapshot = await getDocs(q);
   return snapshot.docs.map(d => ({ ...(d.data() as Observation), id: d.id }));
 };
 
-export const saveObservation = async (observation: Observation): Promise<void> => {
-  await addDoc(collection(db, 'observations'), observation);
+export const saveObservation = async (observation: Omit<Observation, 'teacherId'>): Promise<void> => {
+  await addDoc(collection(db, 'observations'), { ...observation, teacherId: getTeacherId() });
 };
 
 export const getObservationsByStudent = async (studentId: string): Promise<Observation[]> => {
-  const q = query(collection(db, 'observations'), where('studentId', '==', studentId));
+  const q = query(
+    collection(db, 'observations'),
+    where('teacherId', '==', getTeacherId()),
+    where('studentId', '==', studentId)
+  );
   const snapshot = await getDocs(q);
   return snapshot.docs.map(d => ({ ...(d.data() as Observation), id: d.id }));
 };
@@ -47,16 +59,21 @@ export const deleteObservation = async (id: string): Promise<void> => {
 
 // Evaluations
 export const getEvaluations = async (): Promise<Evaluation[]> => {
-  const snapshot = await getDocs(collection(db, 'evaluations'));
+  const q = query(collection(db, 'evaluations'), where('teacherId', '==', getTeacherId()));
+  const snapshot = await getDocs(q);
   return snapshot.docs.map(d => ({ ...(d.data() as Evaluation), id: d.id }));
 };
 
-export const saveEvaluation = async (evaluation: Evaluation): Promise<void> => {
-  await addDoc(collection(db, 'evaluations'), evaluation);
+export const saveEvaluation = async (evaluation: Omit<Evaluation, 'teacherId'>): Promise<void> => {
+  await addDoc(collection(db, 'evaluations'), { ...evaluation, teacherId: getTeacherId() });
 };
 
 export const getEvaluationsByStudent = async (studentId: string): Promise<Evaluation[]> => {
-  const q = query(collection(db, 'evaluations'), where('studentId', '==', studentId));
+  const q = query(
+    collection(db, 'evaluations'),
+    where('teacherId', '==', getTeacherId()),
+    where('studentId', '==', studentId)
+  );
   const snapshot = await getDocs(q);
   return snapshot.docs.map(d => ({ ...(d.data() as Evaluation), id: d.id }));
 };

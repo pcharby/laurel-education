@@ -218,7 +218,7 @@ export function AddObservationDialog({
       return;
     }
 
-    const newObservation: Observation = {
+    const newObservation: Omit<Observation, 'teacherId'> = {
       id: `obs_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       studentId,
       type,

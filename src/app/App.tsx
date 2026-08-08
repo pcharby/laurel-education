@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { onAuthStateChanged, signInAnonymously, signOut, type User } from 'firebase/auth';
+import { auth } from '../firebase';
 import { Student } from './lib/types';
 import { LoginScreen } from './components/LoginScreen';
 import { ClassSelector } from './components/ClassSelector';
@@ -36,18 +38,31 @@ type View =
   | 'password-management';
 
 export default function App() {
+  const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
   const [view, setView] = useState<View>('login');
   const [selectedClass, setSelectedClass] = useState<{ id: string; name: string; subject: string } | null>(null);
   const [selectedType, setSelectedType] = useState<'text' | 'audio' | 'image' | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      setView(user ? 'class-selection' : 'login');
+    });
+    return unsubscribe;
+  }, []);
+
   const handleLogin = () => {
-    setView('class-selection');
+    // Navigation happens via onAuthStateChanged once Firebase confirms the session.
   };
 
-  const handleDemo = () => {
-    setView('class-selection');
-    toast.success('Welcome to the Laurel Education Demo!');
+  const handleDemo = async () => {
+    try {
+      await signInAnonymously(auth);
+      toast.success('Welcome to the Laurel Education Demo!');
+    } catch {
+      toast.error('Could not start the demo. Please try again.');
+    }
   };
 
   const handleSelectClass = (classInfo: { id: string; name: string; subject: string }) => {
@@ -159,8 +174,8 @@ export default function App() {
     setView('settings');
   };
 
-  const handleLogout = () => {
-    setView('login');
+  const handleLogout = async () => {
+    await signOut(auth);
     toast.success('Logged out successfully');
   };
 
@@ -171,6 +186,14 @@ export default function App() {
   const handleBackFromSettings = () => {
     setView('class-selection');
   };
+
+  if (authUser === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1A1A40] via-[#2E2B6E] to-[#6B5FE4]">
+        <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
