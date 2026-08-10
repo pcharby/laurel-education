@@ -5,7 +5,7 @@ import { deleteStudent, getObservationsByStudent } from '../lib/storage';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
-import { ArrowLeft, Calculator, Beaker, BookText, BookOpen, TrendingUp, Award, Tag, Clock, FileText, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calculator, Beaker, BookText, BookOpen, TrendingUp, Award, Tag, Clock, FileText, Trash2, Loader2, Download } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 import { toast } from 'sonner';
 import { format, isSameMonth } from 'date-fns';
@@ -22,6 +22,7 @@ interface StudentSummaryViewProps {
   onBack: () => void;
   onGenerateReport: () => void;
   onViewObservations: () => void;
+  onExportData: () => void;
 }
 
 // Demo/anonymous accounts show fixed sample numbers since there's no real
@@ -57,7 +58,7 @@ const SUBJECT_ICONS: Record<string, typeof Calculator> = {
   'Language Arts': BookText,
 };
 
-export function StudentSummaryView({ student, onBack, onGenerateReport, onViewObservations }: StudentSummaryViewProps) {
+export function StudentSummaryView({ student, onBack, onGenerateReport, onViewObservations, onExportData }: StudentSummaryViewProps) {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [observations, setObservations] = useState<Observation[]>([]);
@@ -159,7 +160,7 @@ export function StudentSummaryView({ student, onBack, onGenerateReport, onViewOb
         </div>
       </div>
 
-      <div className="flex-1 p-4 space-y-3 pb-32">
+      <div className="flex-1 p-4 space-y-3 pb-44">
         <Button
           onClick={onGenerateReport}
           className="w-full h-12 bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] hover:from-[#1A1A40]/90 hover:to-[#6B5FE4]/90 text-white font-semibold mb-4"
@@ -287,6 +288,15 @@ export function StudentSummaryView({ student, onBack, onGenerateReport, onViewOb
           <FileText className="w-5 h-5" />
           View All Observations
         </Button>
+        {!isDemo && (
+          <Button
+            onClick={onExportData}
+            className="w-full h-9 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium gap-2 text-sm"
+          >
+            <Download className="w-4 h-4" />
+            Export Student Data
+          </Button>
+        )}
         <Button
           onClick={handleDeleteStudent}
           disabled={deleting}

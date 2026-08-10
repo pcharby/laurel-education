@@ -10,6 +10,7 @@ import { StudentSummarySelector } from './components/StudentSummarySelector';
 import { StudentSummaryView } from './components/StudentSummaryView';
 import { ReportGenerationView } from './components/ReportGenerationView';
 import { StudentObservationHistory } from './components/StudentObservationHistory';
+import { StudentDataExport } from './components/StudentDataExport';
 import { ClassInsightsDashboard } from './components/ClassInsightsDashboard';
 import { CustomRubricsConfig } from './components/CustomRubricsConfig';
 import { SettingsMenu } from './components/SettingsMenu';
@@ -30,6 +31,7 @@ type View =
   | 'student-summary'
   | 'report-generation'
   | 'observation-history'
+  | 'data-export'
   | 'class-insights'
   | 'custom-rubrics'
   | 'settings'
@@ -131,6 +133,14 @@ export default function App() {
   };
 
   const handleBackFromObservations = () => {
+    setView('student-summary');
+  };
+
+  const handleExportData = () => {
+    setView('data-export');
+  };
+
+  const handleBackFromExport = () => {
     setView('student-summary');
   };
 
@@ -241,6 +251,7 @@ export default function App() {
           onBack={handleBackToSummarySelection}
           onGenerateReport={handleGenerateReport}
           onViewObservations={handleViewObservations}
+          onExportData={handleExportData}
         />
       )}
 
@@ -248,6 +259,13 @@ export default function App() {
         <StudentObservationHistory
           student={selectedStudent}
           onBack={handleBackFromObservations}
+        />
+      )}
+
+      {view === 'data-export' && selectedStudent && (
+        <StudentDataExport
+          student={selectedStudent}
+          onBack={handleBackFromExport}
         />
       )}
 
