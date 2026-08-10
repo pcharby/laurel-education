@@ -32,6 +32,13 @@ export const getStudentById = async (id: string): Promise<Student | undefined> =
   return students.find(s => s.id === id);
 };
 
+// Deleting the student is enough - a Cloud Function trigger
+// (cascadeDeleteStudentData) removes their observations and evaluations
+// server-side so they don't become orphaned, unreachable records.
+export const deleteStudent = async (id: string): Promise<void> => {
+  await deleteDoc(doc(db, 'students', id));
+};
+
 // Observations
 export const getObservations = async (): Promise<Observation[]> => {
   const q = query(collection(db, 'observations'), where('teacherId', '==', getTeacherId()));
@@ -76,4 +83,22 @@ export const getEvaluationsByStudent = async (studentId: string): Promise<Evalua
   );
   const snapshot = await getDocs(q);
   return snapshot.docs.map(d => ({ ...(d.data() as Evaluation), id: d.id }));
+};
+
+// Permanently deletes every student, observation, and evaluation owned by the
+// signed-in teacher. Deleting each student triggers the server-side cascade
+// (cascadeDeleteStudentData) for their observations/evaluations; the direct
+// sweep below is a defensive backstop for anything that isn't reachable that
+// way (e.g. an observation whose student was already removed).
+export const deleteAllMyData = async (): Promise<void> => {
+  const teacherId = getTeacherId();
+
+  const students = await getStudents();
+  await Promise.all(students.map(s => deleteDoc(doc(db, 'students', s.id))));
+
+  for (const collectionName of ['observations', 'evaluations'] as const) {
+    const q = query(collection(db, collectionName), where('teacherId', '==', teacherId));
+    const snapshot = await getDocs(q);
+    await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, collectionName, d.id))));
+  }
 };

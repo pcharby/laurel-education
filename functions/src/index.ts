@@ -7,6 +7,7 @@ import { enforceRateLimit } from './rateLimit.js';
 import { REGION } from './region.js';
 
 export { auditStudents, auditObservations, auditEvaluations } from './auditLog.js';
+export { cascadeDeleteStudentData } from './cascadeDelete.js';
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 

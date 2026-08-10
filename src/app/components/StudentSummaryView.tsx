@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Student } from '../lib/types';
 import { formatStudentName } from '../lib/utils';
+import { deleteStudent } from '../lib/storage';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
-import { ArrowLeft, Calculator, Beaker, BookText, TrendingUp, TrendingDown, Award, Target, Eye, FileText } from 'lucide-react';
+import { ArrowLeft, Calculator, Beaker, BookText, TrendingUp, TrendingDown, Award, Target, Eye, FileText, Trash2, Loader2 } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +24,22 @@ interface StudentSummaryViewProps {
 
 export function StudentSummaryView({ student, onBack, onGenerateReport, onViewObservations }: StudentSummaryViewProps) {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteStudent = async () => {
+    if (!confirm(`Permanently delete ${formatStudentName(student.name)} and all of their observations and evaluations? This cannot be undone.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteStudent(student.id);
+      toast.success(`${formatStudentName(student.name)} has been deleted.`);
+      onBack();
+    } catch {
+      toast.error('Could not delete this student. Please try again.');
+      setDeleting(false);
+    }
+  };
 
   const subjects = [
     {
@@ -102,7 +120,7 @@ export function StudentSummaryView({ student, onBack, onGenerateReport, onViewOb
         </div>
       </div>
 
-      <div className="flex-1 p-4 space-y-3 pb-20">
+      <div className="flex-1 p-4 space-y-3 pb-32">
         <Button
           onClick={onGenerateReport}
           className="w-full h-12 bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] hover:from-[#1A1A40]/90 hover:to-[#6B5FE4]/90 text-white font-semibold mb-4"
@@ -169,14 +187,22 @@ export function StudentSummaryView({ student, onBack, onGenerateReport, onViewOb
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t space-y-2">
         <Button
           onClick={onViewObservations}
-          
+
           className="w-full h-12 border-2 border-[#6B5FE4] hover:bg-[#EBE8F5] font-semibold gap-2"
         >
           <FileText className="w-5 h-5" />
           View All Observations
+        </Button>
+        <Button
+          onClick={handleDeleteStudent}
+          disabled={deleting}
+          className="w-full h-9 text-red-600 hover:bg-red-50 font-medium gap-2 text-sm"
+        >
+          {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+          Delete Student
         </Button>
       </div>
 
