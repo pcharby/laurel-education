@@ -1,4 +1,4 @@
-import { Student, Observation, Evaluation } from './types';
+import { Student, Observation, Evaluation, BugReport } from './types';
 import { auth, db } from '../../firebase';
 import {
   collection,
@@ -83,6 +83,24 @@ export const getEvaluationsByStudent = async (studentId: string): Promise<Evalua
   );
   const snapshot = await getDocs(q);
   return snapshot.docs.map(d => ({ ...(d.data() as Evaluation), id: d.id }));
+};
+
+// Bug/feedback reports. Write-only from the client by design - a teacher
+// can't read back their own or others' submitted reports; they're reviewed
+// directly in the Firestore console. Not included in deleteAllMyData, same
+// as auditLogs/rateLimits: operational data, not the teacher's own content.
+export const submitBugReport = async (
+  report: Pick<BugReport, 'category' | 'description'>
+): Promise<void> => {
+  await addDoc(collection(db, 'bugReports'), {
+    ...report,
+    teacherId: getTeacherId(),
+    teacherEmail: auth.currentUser?.email ?? null,
+    userAgent: navigator.userAgent,
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    createdAt: new Date().toISOString(),
+    status: 'new',
+  });
 };
 
 // Permanently deletes every student, observation, and evaluation owned by the

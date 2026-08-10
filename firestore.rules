@@ -43,6 +43,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Bug/feedback reports: any signed-in user can file one for themselves,
+    // but can't read, edit, or delete reports afterward (their own or
+    // anyone else's) - reviewed directly in the console.
+    match /bugReports/{reportId} {
+      allow create: if ownsIncoming();
+      allow read, update, delete: if false;
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

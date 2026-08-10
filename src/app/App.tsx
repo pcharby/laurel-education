@@ -17,6 +17,7 @@ import { SettingsMenu } from './components/SettingsMenu';
 import { ClassesAndSubjectsConfig } from './components/ClassesAndSubjectsConfig';
 import { CurriculumConfig } from './components/CurriculumConfig';
 import { PasswordManagement } from './components/PasswordManagement';
+import { ReportProblem } from './components/ReportProblem';
 import { AddObservationDialog } from './components/AddObservationDialog';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
@@ -37,7 +38,8 @@ type View =
   | 'settings'
   | 'classes-and-subjects'
   | 'curriculum'
-  | 'password-management';
+  | 'password-management'
+  | 'report-problem';
 
 export default function App() {
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
@@ -184,6 +186,14 @@ export default function App() {
     setView('settings');
   };
 
+  const handleReportProblem = () => {
+    setView('report-problem');
+  };
+
+  const handleBackFromReportProblem = () => {
+    setView('settings');
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     toast.success('Logged out successfully');
@@ -286,6 +296,7 @@ export default function App() {
           onClassesAndSubjects={handleClassesAndSubjects}
           onCurriculum={handleCurriculum}
           onPasswordManagement={handlePasswordManagement}
+          onReportProblem={handleReportProblem}
         />
       )}
 
@@ -301,6 +312,10 @@ export default function App() {
 
       {view === 'password-management' && (
         <PasswordManagement onBack={handleBackFromPasswordManagement} />
+      )}
+
+      {view === 'report-problem' && (
+        <ReportProblem onBack={handleBackFromReportProblem} />
       )}
 
       {view === 'report-generation' && selectedStudent && (

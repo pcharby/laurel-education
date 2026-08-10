@@ -1,6 +1,6 @@
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Lock, BookOpen, Calendar } from 'lucide-react';
+import { ArrowLeft, Lock, BookOpen, Calendar, Bug } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 
 interface SettingsMenuProps {
@@ -8,9 +8,10 @@ interface SettingsMenuProps {
   onClassesAndSubjects: () => void;
   onCurriculum: () => void;
   onPasswordManagement: () => void;
+  onReportProblem: () => void;
 }
 
-export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPasswordManagement }: SettingsMenuProps) {
+export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPasswordManagement, onReportProblem }: SettingsMenuProps) {
   const settingsOptions = [
     {
       icon: BookOpen,
@@ -29,9 +30,16 @@ export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPas
     {
       icon: Lock,
       title: 'Password & Security',
-      description: 'Update password and enable biometric login',
+      description: 'Update your password or delete your account',
       color: '#767F93',
       onClick: onPasswordManagement,
+    },
+    {
+      icon: Bug,
+      title: 'Report a Problem',
+      description: 'Report a bug or send feedback',
+      color: '#D97706',
+      onClick: onReportProblem,
     },
   ];
 

@@ -29,3 +29,15 @@ export interface Evaluation {
   areasForImprovement: string[];
   date: string;
 }
+
+export interface BugReport {
+  id: string;
+  teacherId: string;
+  teacherEmail: string | null;
+  category: 'bug' | 'feature-request' | 'other';
+  description: string;
+  userAgent: string;
+  viewport: string;
+  createdAt: string;
+  status: 'new' | 'reviewed' | 'resolved';
+}
