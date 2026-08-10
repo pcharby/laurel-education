@@ -69,7 +69,14 @@ export const generateEvaluation = onCall<GenerateEvaluationRequest>(
       })
       .join('\n\n');
 
-    const prompt = `You are helping a teacher write report card commentary for a student named ${studentName}, based only on the classroom observations recorded below.
+    // The student's real name is never sent to the model - only the
+    // [STUDENT] placeholder is, and the real name is substituted back in
+    // below. This keeps the identifying name from leaving Canadian
+    // infrastructure for this call (the Anthropic API itself still
+    // processes on US infra, so this reduces but doesn't eliminate the
+    // data-residency exposure - free-text observation content a teacher
+    // wrote is still sent as-is).
+    const prompt = `You are helping a teacher write report card commentary for a student, based only on the classroom observations recorded below. Refer to the student only as "[STUDENT]" throughout your response - never use a real name. Use "[STUDENT]'s" for the possessive form.
 
 Observations:
 ${observationsText}
@@ -93,6 +100,15 @@ Write a professional, encouraging report card evaluation grounded strictly in th
       throw new HttpsError('internal', 'No response generated.');
     }
 
-    return response.parsed_output;
+    return substitutePlaceholder(response.parsed_output, studentName);
   }
 );
+
+const substitutePlaceholder = (
+  result: GenerateEvaluationResponse,
+  studentName: string
+): GenerateEvaluationResponse => ({
+  summary: result.summary.split('[STUDENT]').join(studentName),
+  strengths: result.strengths.map((s) => s.split('[STUDENT]').join(studentName)),
+  areasForImprovement: result.areasForImprovement.map((a) => a.split('[STUDENT]').join(studentName)),
+});
