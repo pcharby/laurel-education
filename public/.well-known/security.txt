@@ -1,0 +1,11 @@
+# Laurel Education — Security Contact
+#
+# This file follows RFC 9116 (https://www.rfc-editor.org/rfc/rfc9116).
+# NOTE TO LAUREL EDUCATION: the Contact field below is a placeholder.
+# Replace it with a real, monitored security/support address before
+# relying on this file, then remove this note.
+
+Contact: mailto:[SECURITY CONTACT EMAIL]
+Expires: 2027-08-11T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://laureleducation-64768.web.app/.well-known/security.txt
