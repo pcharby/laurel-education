@@ -30,6 +30,19 @@ service cloud.firestore {
       allow create: if ownsIncoming();
     }
 
+    // Written only by Cloud Functions triggers (Admin SDK bypasses these
+    // rules entirely) - teachers can read their own audit trail, no client
+    // can ever write one directly.
+    match /auditLogs/{logId} {
+      allow read: if ownsExisting();
+      allow write: if false;
+    }
+
+    // Rate-limit counters are an internal Cloud Functions concern only.
+    match /rateLimits/{limitId} {
+      allow read, write: if false;
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

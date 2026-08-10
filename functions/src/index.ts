@@ -3,6 +3,10 @@ import { defineSecret } from 'firebase-functions/params';
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
+import { enforceRateLimit } from './rateLimit.js';
+import { REGION } from './region.js';
+
+export { auditStudents, auditObservations, auditEvaluations } from './auditLog.js';
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
@@ -28,11 +32,13 @@ const EvaluationSchema = z.object({
 type GenerateEvaluationResponse = z.infer<typeof EvaluationSchema>;
 
 export const generateEvaluation = onCall<GenerateEvaluationRequest>(
-  { secrets: [anthropicApiKey] },
+  { secrets: [anthropicApiKey], region: REGION },
   async (request): Promise<GenerateEvaluationResponse> => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Sign in required.');
     }
+
+    await enforceRateLimit(request.auth.uid, 'generateEvaluation');
 
     const { studentName, observations } = request.data;
 

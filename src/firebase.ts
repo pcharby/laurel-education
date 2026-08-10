@@ -16,4 +16,6 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const functions = getFunctions(app);
+// Must match the region generateEvaluation is deployed to (functions/src/index.ts) -
+// student data should be processed in Canada, not the us-central1 default.
+export const functions = getFunctions(app, 'northamerica-northeast1');
