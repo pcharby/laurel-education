@@ -12,6 +12,7 @@ import { getObservationsByStudent } from '../lib/storage';
 import { generateMockEvaluation } from '../lib/mock-ai';
 import { generateEvaluation as generateAIEvaluation } from '../lib/ai';
 import { auth } from '../../firebase';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface ReportGenerationViewProps {
   student: Student;
@@ -25,6 +26,7 @@ interface SubjectReport {
 }
 
 export function ReportGenerationView({ student, onBack }: ReportGenerationViewProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   const [isGenerating, setIsGenerating] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
   const [reports, setReports] = useState<SubjectReport[]>([]);
@@ -101,9 +103,9 @@ export function ReportGenerationView({ student, onBack }: ReportGenerationViewPr
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-white/80">Riverside Elem.</div>
+            <div className="text-xs text-white/80">{schoolName}</div>
           </div>
         </div>
         <h1 className="text-xl font-semibold mb-1">Report Card Commentary</h1>

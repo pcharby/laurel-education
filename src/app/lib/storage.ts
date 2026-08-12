@@ -1,4 +1,4 @@
-import { Student, Observation, Evaluation, BugReport, SchoolClass, TeacherProfile, CurriculumResource } from './types';
+import { Student, Observation, Evaluation, BugReport, SchoolClass, TeacherProfile, CurriculumResource, Rubric } from './types';
 import { auth, db, storage } from '../../firebase';
 import {
   collection,
@@ -69,6 +69,31 @@ export const updateClass = async (
 
 export const deleteClass = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'classes', id));
+};
+
+// Rubrics - private per-teacher labels used when recording observations,
+// distinct from curriculumResources (which are shared across teachers).
+export const getRubrics = async (subject: string): Promise<Rubric[]> => {
+  const q = query(
+    collection(db, 'rubrics'),
+    where('teacherId', '==', getTeacherId()),
+    where('subject', '==', subject)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(d => ({ ...(d.data() as Rubric), id: d.id }));
+};
+
+export const addRubric = async (subject: string, label: string): Promise<void> => {
+  await addDoc(collection(db, 'rubrics'), {
+    subject,
+    label,
+    teacherId: getTeacherId(),
+    createdAt: new Date().toISOString(),
+  });
+};
+
+export const deleteRubric = async (id: string): Promise<void> => {
+  await deleteDoc(doc(db, 'rubrics', id));
 };
 
 // Observations
@@ -142,11 +167,14 @@ export const getTeacherProfile = async (): Promise<TeacherProfile | null> => {
   return snap.exists() ? (snap.data() as TeacherProfile) : null;
 };
 
-export const saveTeacherProfile = async (jurisdiction: string): Promise<void> => {
-  await setDoc(doc(db, 'teacherProfiles', getTeacherId()), {
-    jurisdiction,
-    updatedAt: new Date().toISOString(),
-  });
+export const saveTeacherProfile = async (
+  updates: Partial<Pick<TeacherProfile, 'jurisdiction' | 'schoolName'>>
+): Promise<void> => {
+  await setDoc(
+    doc(db, 'teacherProfiles', getTeacherId()),
+    stripUndefined({ ...updates, updatedAt: new Date().toISOString() }),
+    { merge: true }
+  );
 };
 
 // Curriculum resources: a shared, cross-teacher library, not scoped to the
@@ -240,7 +268,7 @@ export const deleteAllMyData = async (): Promise<void> => {
   const students = await getStudents();
   await Promise.all(students.map(s => deleteDoc(doc(db, 'students', s.id))));
 
-  for (const collectionName of ['observations', 'evaluations', 'classes'] as const) {
+  for (const collectionName of ['observations', 'evaluations', 'classes', 'rubrics'] as const) {
     const q = query(collection(db, collectionName), where('teacherId', '==', teacherId));
     const snapshot = await getDocs(q);
     await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, collectionName, d.id))));

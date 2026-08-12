@@ -20,6 +20,12 @@ service cloud.firestore {
       allow create: if ownsIncoming();
     }
 
+    match /rubrics/{rubricId} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if false;
+    }
+
     match /students/{studentId} {
       allow read, update, delete: if ownsExisting();
       allow create: if ownsIncoming();

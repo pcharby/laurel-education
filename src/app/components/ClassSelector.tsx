@@ -5,6 +5,7 @@ import { auth } from '../../firebase';
 import { Button } from './ui/button';
 import { BookOpen, Users, Calculator, Beaker, BookText, Palette, LogOut, Settings, Plus, Loader2 } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface ClassSelectorProps {
   onSelectClass: (classInfo: SchoolClass) => void;
@@ -53,6 +54,7 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
   const isDemo = auth.currentUser?.isAnonymous ?? false;
+  const { schoolName, badgeLetter } = useSchoolName();
 
   useEffect(() => {
     if (isDemo) {
@@ -94,10 +96,10 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
       <div className="text-center pt-2 pb-4">
         <div className="flex items-center justify-center gap-3 mb-4">
           <div className="w-12 h-12 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-lg">
-            R
+            {badgeLetter}
           </div>
           <div className="text-left">
-            <div className="text-xs text-gray-700">Riverside Elementary</div>
+            <div className="text-xs text-gray-700">{schoolName}</div>
             <LaurelLogo height="md" showProductName />
           </div>
         </div>

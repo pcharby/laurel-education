@@ -15,6 +15,7 @@ import {
   deleteUser,
 } from 'firebase/auth';
 import { deleteAllMyData } from '../lib/storage';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface PasswordManagementProps {
   onBack: () => void;
@@ -28,6 +29,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
 };
 
 export function PasswordManagement({ onBack }: PasswordManagementProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -111,9 +113,9 @@ export function PasswordManagement({ onBack }: PasswordManagementProps) {
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-gray-700">Riverside Elem.</div>
+            <div className="text-xs text-gray-700">{schoolName}</div>
           </div>
         </div>
         <h2 className="text-xl font-semibold text-gray-800">Password & Security</h2>

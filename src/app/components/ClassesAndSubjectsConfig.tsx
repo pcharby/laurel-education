@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ArrowLeft, Plus, X, BookOpen, Pencil, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LaurelLogo } from './LaurelLogo';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface ClassesAndSubjectsConfigProps {
   onBack: () => void;
@@ -17,6 +18,7 @@ interface ClassesAndSubjectsConfigProps {
 const emptyForm = { subject: '', grade: '', name: '', schedule: '' };
 
 export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -116,9 +118,9 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-gray-700">Riverside Elem.</div>
+            <div className="text-xs text-gray-700">{schoolName}</div>
           </div>
         </div>
         <h2 className="text-xl font-semibold text-foreground">Classes & Subjects</h2>

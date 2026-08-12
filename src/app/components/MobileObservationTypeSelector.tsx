@@ -2,6 +2,7 @@ import { Button } from './ui/button';
 import { FileText, Mic, Camera, ArrowLeft, BarChart3 } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 import { SchoolClass } from '../lib/types';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface MobileObservationTypeSelectorProps {
   onSelectType: (type: 'text' | 'audio' | 'image') => void;
@@ -16,6 +17,7 @@ export function MobileObservationTypeSelector({
   onClassInsights,
   classInfo
 }: MobileObservationTypeSelectorProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F7F5FC] to-[#EBE8F5] flex flex-col p-4">
       <div className="flex items-center justify-between mb-6">
@@ -27,9 +29,9 @@ export function MobileObservationTypeSelector({
         </div>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
-            R
+            {badgeLetter}
           </div>
-          <div className="text-xs text-gray-700">Riverside Elem.</div>
+          <div className="text-xs text-gray-700">{schoolName}</div>
         </div>
       </div>
 

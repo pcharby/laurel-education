@@ -8,6 +8,7 @@ import { ArrowLeft, FileText, Mic, Image as ImageIcon, Trash2, Calendar, Tag } f
 import { format } from 'date-fns';
 import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface StudentObservationHistoryProps {
   student: Student;
@@ -15,6 +16,7 @@ interface StudentObservationHistoryProps {
 }
 
 export function StudentObservationHistory({ student, onBack }: StudentObservationHistoryProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   const [observations, setObservations] = useState<Observation[]>([]);
   const [filter, setFilter] = useState<string>('all');
 
@@ -73,9 +75,9 @@ export function StudentObservationHistory({ student, onBack }: StudentObservatio
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-white/80">Riverside Elem.</div>
+            <div className="text-xs text-white/80">{schoolName}</div>
           </div>
         </div>
         <h1 className="text-xl font-semibold mb-1">Observation History</h1>

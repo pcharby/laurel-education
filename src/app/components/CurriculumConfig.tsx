@@ -28,6 +28,7 @@ import {
 import { ArrowLeft, Save, BookOpen, Upload, Link as LinkIcon, FileText, X, Check, Loader2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { LaurelLogo } from './LaurelLogo';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface CurriculumConfigProps {
   onBack: () => void;
@@ -35,6 +36,7 @@ interface CurriculumConfigProps {
 }
 
 export function CurriculumConfig({ onBack, onCustomRubrics }: CurriculumConfigProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   const [jurisdiction, setJurisdiction] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [jurisdictionDraft, setJurisdictionDraft] = useState('');
@@ -93,7 +95,7 @@ export function CurriculumConfig({ onBack, onCustomRubrics }: CurriculumConfigPr
     if (!jurisdictionDraft) return;
     setSavingProfile(true);
     try {
-      await saveTeacherProfile(jurisdictionDraft);
+      await saveTeacherProfile({ jurisdiction: jurisdictionDraft });
       setJurisdiction(jurisdictionDraft);
       toast.success('Jurisdiction saved.');
     } catch {
@@ -169,9 +171,9 @@ export function CurriculumConfig({ onBack, onCustomRubrics }: CurriculumConfigPr
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-gray-700">Riverside Elem.</div>
+            <div className="text-xs text-gray-700">{schoolName}</div>
           </div>
         </div>
         <h2 className="text-xl font-semibold text-foreground">Curriculum & Lesson Plans</h2>

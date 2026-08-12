@@ -1,7 +1,8 @@
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Lock, BookOpen, Calendar, Bug } from 'lucide-react';
+import { ArrowLeft, Lock, BookOpen, Calendar, Bug, School } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface SettingsMenuProps {
   onBack: () => void;
@@ -9,10 +10,19 @@ interface SettingsMenuProps {
   onCurriculum: () => void;
   onPasswordManagement: () => void;
   onReportProblem: () => void;
+  onSchoolProfile: () => void;
 }
 
-export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPasswordManagement, onReportProblem }: SettingsMenuProps) {
+export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPasswordManagement, onReportProblem, onSchoolProfile }: SettingsMenuProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   const settingsOptions = [
+    {
+      icon: School,
+      title: 'School Profile',
+      description: 'Set your school name, shown throughout the app',
+      color: '#4B5E7A',
+      onClick: onSchoolProfile,
+    },
     {
       icon: BookOpen,
       title: 'Classes & Subjects',
@@ -55,9 +65,9 @@ export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPas
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-gray-700">Riverside Elem.</div>
+            <div className="text-xs text-gray-700">{schoolName}</div>
           </div>
         </div>
         <h2 className="text-2xl font-semibold text-gray-800">Settings</h2>

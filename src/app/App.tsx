@@ -18,6 +18,7 @@ import { ClassesAndSubjectsConfig } from './components/ClassesAndSubjectsConfig'
 import { CurriculumConfig } from './components/CurriculumConfig';
 import { PasswordManagement } from './components/PasswordManagement';
 import { ReportProblem } from './components/ReportProblem';
+import { SchoolProfile } from './components/SchoolProfile';
 import { AddObservationDialog } from './components/AddObservationDialog';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
@@ -39,7 +40,8 @@ type View =
   | 'classes-and-subjects'
   | 'curriculum'
   | 'password-management'
-  | 'report-problem';
+  | 'report-problem'
+  | 'school-profile';
 
 export default function App() {
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
@@ -194,6 +196,14 @@ export default function App() {
     setView('settings');
   };
 
+  const handleSchoolProfile = () => {
+    setView('school-profile');
+  };
+
+  const handleBackFromSchoolProfile = () => {
+    setView('settings');
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     toast.success('Logged out successfully');
@@ -298,7 +308,12 @@ export default function App() {
           onCurriculum={handleCurriculum}
           onPasswordManagement={handlePasswordManagement}
           onReportProblem={handleReportProblem}
+          onSchoolProfile={handleSchoolProfile}
         />
+      )}
+
+      {view === 'school-profile' && (
+        <SchoolProfile onBack={handleBackFromSchoolProfile} />
       )}
 
       {view === 'classes-and-subjects' && (

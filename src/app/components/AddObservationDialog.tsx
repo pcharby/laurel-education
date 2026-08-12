@@ -20,6 +20,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Checkbox } from './ui/checkbox';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { FileText, Mic, Image as ImageIcon, X } from 'lucide-react';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface AddObservationDialogProps {
   open: boolean;
@@ -74,6 +75,7 @@ export function AddObservationDialog({
   initialType = 'text',
   subject = '',
 }: AddObservationDialogProps) {
+  const { schoolName } = useSchoolName();
   const [type, setType] = useState<'text' | 'audio' | 'image'>(initialType);
   const [content, setContent] = useState('');
   const [selectedRubrics, setSelectedRubrics] = useState<string[]>([]);
@@ -263,7 +265,7 @@ export function AddObservationDialog({
           <div className="flex items-center justify-between mb-2">
             <LaurelLogo height="sm" showProductName />
             <div className="text-right text-xs text-gray-600">
-              <div>Riverside Elementary</div>
+              <div>{schoolName}</div>
             </div>
           </div>
           <DialogTitle className="text-lg">Record Observation</DialogTitle>

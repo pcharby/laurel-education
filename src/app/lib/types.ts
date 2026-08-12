@@ -53,8 +53,17 @@ export interface BugReport {
   status: 'new' | 'reviewed' | 'resolved';
 }
 
+export interface Rubric {
+  id: string;
+  teacherId: string;
+  subject: string;
+  label: string;
+  createdAt: string;
+}
+
 export interface TeacherProfile {
-  jurisdiction: string;
+  jurisdiction?: string;
+  schoolName?: string;
   updatedAt: string;
 }
 

@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { ArrowLeft, Calculator, Beaker, BookText, BookOpen, TrendingUp, Award, Tag, Clock, FileText, Trash2, Loader2, Download } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
+import { useSchoolName } from '../lib/useSchoolName';
 import { toast } from 'sonner';
 import { format, isSameMonth } from 'date-fns';
 import {
@@ -63,6 +64,7 @@ export function StudentSummaryView({ student, onBack, onGenerateReport, onViewOb
   const [deleting, setDeleting] = useState(false);
   const [observations, setObservations] = useState<Observation[]>([]);
   const isDemo = auth.currentUser?.isAnonymous ?? false;
+  const { schoolName, badgeLetter } = useSchoolName();
 
   useEffect(() => {
     if (isDemo) return;
@@ -125,9 +127,9 @@ export function StudentSummaryView({ student, onBack, onGenerateReport, onViewOb
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-white/80">Riverside Elem.</div>
+            <div className="text-xs text-white/80">{schoolName}</div>
           </div>
         </div>
         <div className="flex items-center gap-3 mb-4">
