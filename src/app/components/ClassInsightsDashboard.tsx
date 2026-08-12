@@ -1,225 +1,91 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Progress } from './ui/progress';
 import { StudentListDialog } from './StudentListDialog';
-import { ArrowLeft, TrendingUp, TrendingDown, Users, Target, Award, AlertCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, Users, Award, Tag, Clock, Loader2 } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
-import { WorksheetGeneratorView } from './WorksheetGeneratorView';
-import { SchoolClass } from '../lib/types';
+import { SchoolClass, Student, Observation } from '../lib/types';
+import { getStudents, getObservations } from '../lib/storage';
+import { auth } from '../../firebase';
+import { useSchoolName } from '../lib/useSchoolName';
+import { format, isSameMonth } from 'date-fns';
 
 interface ClassInsightsDashboardProps {
   onBack: () => void;
   classInfo: SchoolClass;
 }
 
+// Demo/anonymous accounts see a fixed sample snapshot, same pattern used
+// throughout the app (ClassSelector's DEMO_CLASSES, StudentSummaryView's
+// DEMO_SUBJECTS) - there's no real data behind a demo session to compute
+// from.
+const DEMO_STATS = {
+  totalObservations: 35,
+  thisMonth: 12,
+  documented: 8,
+  totalStudents: 10,
+  leastDocumented: [
+    { name: 'Noah Patel', count: 1 },
+    { name: 'Mason Davis', count: 2 },
+    { name: 'James Wilson', count: 2 },
+  ],
+  topTags: [
+    ['participation', 4], ['problem-solving', 3], ['collaboration', 3], ['reading-comprehension', 2],
+  ] as [string, number][],
+  recent: { subject: 'Mathematics', content: 'Solved multi-step fraction problems independently.', timestamp: new Date().toISOString() },
+};
+
 export function ClassInsightsDashboard({ onBack, classInfo }: ClassInsightsDashboardProps) {
-  const [selectedView, setSelectedView] = useState<'overview' | 'worksheets'>('overview');
-  const [studentListDialog, setStudentListDialog] = useState<{
-    open: boolean;
-    title: string;
-    students: { name: string; score: number }[];
-    type: 'at-risk' | 'excelling';
-  }>({
-    open: false,
-    title: '',
-    students: [],
-    type: 'at-risk',
-  });
+  const { schoolName, badgeLetter } = useSchoolName();
+  const isDemo = auth.currentUser?.isAnonymous ?? false;
 
-  const classMetrics = {
-    'Mathematics': {
-      classAverage: 76,
-      curriculumAlignment: 82,
-      provincialAverage: 74,
-      trend: 5,
-      totalObservations: 156,
-      studentsAtRisk: 3,
-      studentsExcelling: 8,
-      atRiskStudents: [
-        { name: 'Noah Patel', score: 62 },
-        { name: 'Mason Davis', score: 58 },
-        { name: 'James Wilson', score: 65 },
-      ],
-      excellingStudents: [
-        { name: 'Emma Thompson', score: 92 },
-        { name: 'Liam Chen', score: 89 },
-        { name: 'Sophia Martinez', score: 91 },
-        { name: 'Olivia Johnson', score: 88 },
-        { name: 'Ethan Williams', score: 90 },
-        { name: 'Ava Brown', score: 87 },
-        { name: 'Isabella Garcia', score: 93 },
-        { name: 'Charlotte Lee', score: 86 },
-      ],
-      learningObjectives: [
-        {
-          name: 'Problem Solving',
-          mastery: 78,
-          atRisk: 2,
-          atRiskStudents: [
-            { name: 'Noah Patel', score: 60 },
-            { name: 'Mason Davis', score: 55 },
-          ]
-        },
-        {
-          name: 'Number Sense',
-          mastery: 82,
-          atRisk: 1,
-          atRiskStudents: [
-            { name: 'James Wilson', score: 63 },
-          ]
-        },
-        {
-          name: 'Algebraic Thinking',
-          mastery: 71,
-          atRisk: 4,
-          atRiskStudents: [
-            { name: 'Noah Patel', score: 58 },
-            { name: 'Mason Davis', score: 62 },
-            { name: 'James Wilson', score: 65 },
-            { name: 'Ava Brown', score: 68 },
-          ]
-        },
-        {
-          name: 'Data Management',
-          mastery: 85,
-          atRisk: 0,
-          atRiskStudents: []
-        },
-      ]
-    },
-    'Science': {
-      classAverage: 81,
-      curriculumAlignment: 88,
-      provincialAverage: 78,
-      trend: 7,
-      totalObservations: 98,
-      studentsAtRisk: 2,
-      studentsExcelling: 12,
-      atRiskStudents: [
-        { name: 'Mason Davis', score: 68 },
-        { name: 'James Wilson', score: 66 },
-      ],
-      excellingStudents: [
-        { name: 'Emma Thompson', score: 95 },
-        { name: 'Liam Chen', score: 92 },
-        { name: 'Sophia Martinez', score: 94 },
-        { name: 'Olivia Johnson', score: 89 },
-        { name: 'Ethan Williams', score: 91 },
-        { name: 'Ava Brown', score: 88 },
-        { name: 'Isabella Garcia', score: 96 },
-        { name: 'Charlotte Lee', score: 87 },
-        { name: 'Noah Patel', score: 90 },
-        { name: 'Mia Rodriguez', score: 89 },
-        { name: 'Lucas Kim', score: 93 },
-        { name: 'Amelia Singh', score: 88 },
-      ],
-      learningObjectives: [
-        {
-          name: 'Scientific Inquiry',
-          mastery: 85,
-          atRisk: 1,
-          atRiskStudents: [{ name: 'Mason Davis', score: 67 }]
-        },
-        {
-          name: 'Critical Thinking',
-          mastery: 80,
-          atRisk: 2,
-          atRiskStudents: [
-            { name: 'Mason Davis', score: 68 },
-            { name: 'James Wilson', score: 65 },
-          ]
-        },
-        {
-          name: 'Observation Skills',
-          mastery: 83,
-          atRisk: 1,
-          atRiskStudents: [{ name: 'James Wilson', score: 66 }]
-        },
-      ]
-    },
-    'Language Arts': {
-      classAverage: 73,
-      curriculumAlignment: 79,
-      provincialAverage: 75,
-      trend: -2,
-      totalObservations: 203,
-      studentsAtRisk: 5,
-      studentsExcelling: 6,
-      atRiskStudents: [
-        { name: 'Noah Patel', score: 65 },
-        { name: 'Mason Davis', score: 62 },
-        { name: 'James Wilson', score: 67 },
-        { name: 'Lucas Kim', score: 64 },
-        { name: 'Mia Rodriguez', score: 66 },
-      ],
-      excellingStudents: [
-        { name: 'Emma Thompson', score: 89 },
-        { name: 'Sophia Martinez', score: 91 },
-        { name: 'Isabella Garcia', score: 92 },
-        { name: 'Olivia Johnson', score: 88 },
-        { name: 'Ava Brown', score: 87 },
-        { name: 'Charlotte Lee', score: 86 },
-      ],
-      learningObjectives: [
-        {
-          name: 'Reading Comprehension',
-          mastery: 77,
-          atRisk: 3,
-          atRiskStudents: [
-            { name: 'Noah Patel', score: 64 },
-            { name: 'Mason Davis', score: 61 },
-            { name: 'Lucas Kim', score: 63 },
-          ]
-        },
-        {
-          name: 'Written Expression',
-          mastery: 72,
-          atRisk: 5,
-          atRiskStudents: [
-            { name: 'Noah Patel', score: 65 },
-            { name: 'Mason Davis', score: 62 },
-            { name: 'James Wilson', score: 67 },
-            { name: 'Lucas Kim', score: 64 },
-            { name: 'Mia Rodriguez', score: 66 },
-          ]
-        },
-        {
-          name: 'Oral Communication',
-          mastery: 70,
-          atRisk: 4,
-          atRiskStudents: [
-            { name: 'Noah Patel', score: 66 },
-            { name: 'Mason Davis', score: 63 },
-            { name: 'James Wilson', score: 68 },
-            { name: 'Mia Rodriguez', score: 67 },
-          ]
-        },
-      ]
-    },
-  };
+  const [students, setStudents] = useState<Student[]>([]);
+  const [observations, setObservations] = useState<Observation[]>([]);
+  const [loading, setLoading] = useState(!isDemo);
+  const [showLeastDocumented, setShowLeastDocumented] = useState(false);
 
-  const metrics = classMetrics[classInfo.subject as keyof typeof classMetrics];
+  useEffect(() => {
+    if (isDemo) return;
+    Promise.all([getStudents(), getObservations()]).then(([allStudents, allObservations]) => {
+      setStudents(allStudents.filter(s => s.grade === classInfo.grade));
+      setObservations(allObservations);
+      setLoading(false);
+    });
+  }, [isDemo, classInfo.grade]);
 
-  const showStudentList = (title: string, students: { name: string; score: number }[], type: 'at-risk' | 'excelling') => {
-    setStudentListDialog({ open: true, title, students, type });
-  };
+  const classStudents = isDemo ? [] : students;
+  const classObservations = isDemo
+    ? []
+    : observations.filter(o => o.subject === classInfo.subject && classStudents.some(s => s.id === o.studentId));
 
-  if (selectedView === 'worksheets') {
-    return (
-      <WorksheetGeneratorView
-        onBack={() => setSelectedView('overview')}
-        classInfo={classInfo}
-        learningObjectives={metrics?.learningObjectives ?? []}
-        grade="5"
-      />
-    );
-  }
+  const totalObservations = isDemo ? DEMO_STATS.totalObservations : classObservations.length;
+  const thisMonth = isDemo ? DEMO_STATS.thisMonth : classObservations.filter(o => isSameMonth(new Date(o.timestamp), new Date())).length;
+
+  const countsByStudent = new Map<string, number>();
+  for (const s of classStudents) countsByStudent.set(s.id, 0);
+  for (const o of classObservations) countsByStudent.set(o.studentId, (countsByStudent.get(o.studentId) ?? 0) + 1);
+  const documented = Array.from(countsByStudent.values()).filter(c => c > 0).length;
+
+  const leastDocumented = isDemo
+    ? DEMO_STATS.leastDocumented
+    : classStudents
+        .map(s => ({ name: s.name, count: countsByStudent.get(s.id) ?? 0 }))
+        .sort((a, b) => a.count - b.count)
+        .slice(0, 5);
+
+  const topTags = isDemo
+    ? DEMO_STATS.topTags
+    : (() => {
+        const counts = new Map<string, number>();
+        for (const o of classObservations) for (const tag of o.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+        return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      })();
+
+  const sortedObservations = isDemo ? [] : [...classObservations].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const mostRecent = isDemo ? DEMO_STATS.recent : sortedObservations[0];
 
   return (
-    <>
     <div className="min-h-screen bg-gradient-to-br from-[#F7F5FC] to-[#EBE8F5] flex flex-col">
       <div className="bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] text-white p-4">
         <div className="flex items-center justify-between mb-4">
@@ -231,173 +97,125 @@ export function ClassInsightsDashboard({ onBack, classInfo }: ClassInsightsDashb
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-white/80">Riverside Elem.</div>
+            <div className="text-xs text-white/80">{schoolName}</div>
           </div>
         </div>
         <h1 className="text-xl font-semibold mb-1">Class Insights</h1>
         <p className="text-white/90">{classInfo.subject} - Grade {classInfo.grade}{classInfo.name ? ` (${classInfo.name})` : ''}</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Key Metrics */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="border-l-4 border-l-[#6B5FE4]">
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-[#6B5FE4]">{metrics.classAverage}%</div>
-              <div className="text-xs text-gray-600 mb-2">Class Average</div>
-              <div className={`text-xs flex items-center gap-1 ${metrics.trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {metrics.trend > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {metrics.trend > 0 ? '+' : ''}{metrics.trend}% this term
-              </div>
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#6B5FE4]" />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Key stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="border-l-4 border-l-[#6B5FE4]">
+              <CardContent className="p-3">
+                <div className="text-xl font-bold text-[#6B5FE4]">{totalObservations}</div>
+                <div className="text-xs text-gray-600">Observations</div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-[#7D9D77]">
+              <CardContent className="p-3">
+                <div className="text-xl font-bold text-[#7D9D77]">{thisMonth}</div>
+                <div className="text-xs text-gray-600">This Month</div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-[#4B5E7A]">
+              <CardContent className="p-3">
+                <div className="text-xl font-bold text-[#4B5E7A]">
+                  {isDemo ? DEMO_STATS.documented : documented}/{isDemo ? DEMO_STATS.totalStudents : classStudents.length}
+                </div>
+                <div className="text-xs text-gray-600">Documented</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Least documented */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#6B5FE4]" />
+                Least Documented Students
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {leastDocumented.length === 0 ? (
+                <p className="text-sm text-gray-500">No students in this grade yet.</p>
+              ) : (
+                <button
+                  onClick={() => setShowLeastDocumented(true)}
+                  className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors text-left"
+                >
+                  <span className="text-sm text-gray-700">
+                    {leastDocumented.slice(0, 3).map(s => formatStudentName(s.name)).join(', ')}
+                    {leastDocumented.length > 3 ? `, +${leastDocumented.length - 3} more` : ''}
+                  </span>
+                  <span className="text-xs text-gray-400 shrink-0 ml-2">View all</span>
+                </button>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-[#7D9D77]">
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-[#7D9D77]">{metrics.curriculumAlignment}%</div>
-              <div className="text-xs text-gray-600 mb-2">Curriculum Alignment</div>
-              <div className="text-xs text-gray-500">{metrics.totalObservations} observations</div>
+          {/* Most common tags */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Award className="w-5 h-5 text-[#6B5FE4]" />
+                Most Common Tags
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {topTags.length === 0 ? (
+                <p className="text-sm text-gray-500">No tags recorded yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {topTags.map(([tag, count]) => (
+                    <span key={tag} className="flex items-center gap-1 text-xs bg-[#EBE8F5] text-[#1A1A40] border border-[#D4D0EE] rounded-full px-3 py-1">
+                      <Tag className="w-3 h-3" />
+                      {tag} ({count})
+                    </span>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent activity */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Clock className="w-5 h-5 text-[#6B5FE4]" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!mostRecent ? (
+                <p className="text-sm text-gray-500">No activity yet.</p>
+              ) : (
+                <div className="text-sm text-gray-700 space-y-1">
+                  <p className="text-xs text-gray-500">{format(new Date(mostRecent.timestamp), 'MMM d, yyyy')}</p>
+                  <p>{mostRecent.subject || 'General'}: {mostRecent.content}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
-
-        {/* Comparison Card */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Target className="w-5 h-5 text-[#6B5FE4]" />
-              Performance Comparison
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Your Class</span>
-                <span className="font-semibold">{metrics.classAverage}%</span>
-              </div>
-              <Progress value={metrics.classAverage} className="h-2" />
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Provincial Average</span>
-                <span className="font-semibold">{metrics.provincialAverage}%</span>
-              </div>
-              <Progress value={metrics.provincialAverage} className="h-2 [&>div]:bg-gray-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Student Distribution */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="w-5 h-5 text-[#6B5FE4]" />
-              Student Performance Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <button
-              onClick={() => showStudentList('Students Excelling', metrics.excellingStudents, 'excelling')}
-              className="w-full flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-green-600" />
-                <span className="text-sm font-medium">Excelling</span>
-              </div>
-              <Badge  className="bg-green-100 text-green-700">
-                {metrics.studentsExcelling} students
-              </Badge>
-            </button>
-            <button
-              onClick={() => showStudentList('Students Needing Support', metrics.atRiskStudents, 'at-risk')}
-              className="w-full flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200 hover:bg-yellow-100 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-600" />
-                <span className="text-sm font-medium">Need Support</span>
-              </div>
-              <Badge  className="bg-yellow-100 text-yellow-700">
-                {metrics.studentsAtRisk} students
-              </Badge>
-            </button>
-          </CardContent>
-        </Card>
-
-        {/* Learning Objectives */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Learning Objectives Mastery</CardTitle>
-              <Button
-                size="sm"
-                onClick={() => setSelectedView('worksheets')}
-                className="gap-1.5 text-xs bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] text-white"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Worksheets
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {metrics.learningObjectives.map(obj => (
-              <button
-                key={obj.name}
-                onClick={() => obj.atRisk > 0 && showStudentList(`${obj.name} - Students Needing Support`, obj.atRiskStudents, 'at-risk')}
-                className={`w-full text-left ${obj.atRisk > 0 ? 'hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors cursor-pointer' : ''}`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{obj.name}</p>
-                    {obj.atRisk > 0 && (
-                      <p className="text-xs text-yellow-600 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {obj.atRisk} student{obj.atRisk > 1 ? 's' : ''} need support - tap to view
-                      </p>
-                    )}
-                  </div>
-                  <span className="text-sm font-semibold">{obj.mastery}%</span>
-                </div>
-                <Progress value={obj.mastery} className="h-2" />
-              </button>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Insights Card */}
-        <Card className="bg-gradient-to-br from-[#EBE8F5] to-[#F0EEF8] border-2 border-[#D4D0EE]">
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-2 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-[#6B5FE4]" />
-              Key Insights
-            </h3>
-            <ul className="text-sm space-y-2 text-gray-700 mb-4">
-              <li>• Class performing above provincial average by {metrics.classAverage - metrics.provincialAverage} percentage points</li>
-              <li>• {metrics.studentsExcelling} students ready for enrichment activities</li>
-              <li>• Focus area: {metrics.learningObjectives.reduce((prev, curr) => prev.mastery < curr.mastery ? prev : curr).name}</li>
-            </ul>
-            {metrics.learningObjectives.some(o => o.atRisk > 0) && (
-              <Button
-                onClick={() => setSelectedView('worksheets')}
-                className="w-full gap-2 bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] hover:from-[#1A1A40]/90 hover:to-[#6B5FE4]/90 text-white font-semibold"
-              >
-                <Sparkles className="w-4 h-4" />
-                Generate AI Support Worksheets
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      )}
 
       <StudentListDialog
-        open={studentListDialog.open}
-        onClose={() => setStudentListDialog({ ...studentListDialog, open: false })}
-        title={studentListDialog.title}
-        students={studentListDialog.students}
-        type={studentListDialog.type}
-     />
+        open={showLeastDocumented}
+        onClose={() => setShowLeastDocumented(false)}
+        title="Least Documented Students"
+        description="Students with the fewest observations recorded for this subject this term."
+        students={leastDocumented}
+        countLabel="observations"
+      />
     </div>
-    </>
   );
 }
