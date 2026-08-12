@@ -3,21 +3,102 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Switch } from './ui/switch';
-import { ArrowLeft, Lock, Fingerprint, Save } from 'lucide-react';
+import { Alert, AlertDescription } from './ui/alert';
+import { ArrowLeft, Lock, Save, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
+import { auth } from '../../firebase';
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+  deleteUser,
+} from 'firebase/auth';
+import { deleteAllMyData } from '../lib/storage';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface PasswordManagementProps {
   onBack: () => void;
 }
 
-export function PasswordManagement({ onBack }: PasswordManagementProps) {
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  'auth/invalid-credential': 'Current password is incorrect.',
+  'auth/wrong-password': 'Current password is incorrect.',
+  'auth/weak-password': 'New password must be at least 6 characters.',
+  'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+};
 
-  const handleSave = () => {
-    toast.success('Security settings updated successfully!');
-    onBack();
+export function PasswordManagement({ onBack }: PasswordManagementProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const reauthenticate = async (password: string) => {
+    const user = auth.currentUser;
+    if (!user?.email) throw new Error('Not signed in');
+    const credential = EmailAuthProvider.credential(user.email, password);
+    await reauthenticateWithCredential(user, credential);
+  };
+
+  const handleSave = async () => {
+    setError('');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError('Please fill in all fields.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('New password and confirmation do not match.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await reauthenticate(currentPassword);
+      await updatePassword(auth.currentUser!, newPassword);
+      toast.success('Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? '';
+      setError(AUTH_ERROR_MESSAGES[code] ?? 'Something went wrong. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteError('');
+    if (!deletePassword) {
+      setDeleteError('Enter your password to confirm.');
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await reauthenticate(deletePassword);
+      await deleteAllMyData();
+      await deleteUser(auth.currentUser!);
+      // onAuthStateChanged in App.tsx picks up the signed-out state and
+      // routes back to login - no navigation needed here.
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? '';
+      setDeleteError(AUTH_ERROR_MESSAGES[code] ?? 'Something went wrong. Please try again.');
+      setDeleting(false);
+    }
   };
 
   return (
@@ -28,13 +109,13 @@ export function PasswordManagement({ onBack }: PasswordManagementProps) {
             <Button  size="sm" onClick={onBack}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="md" showProductName />
+            <LaurelLogo height="md" showProductName />
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-gray-700">Riverside Elem.</div>
+            <div className="text-xs text-gray-700">{schoolName}</div>
           </div>
         </div>
         <h2 className="text-xl font-semibold text-gray-800">Password & Security</h2>
@@ -50,12 +131,20 @@ export function PasswordManagement({ onBack }: PasswordManagementProps) {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label htmlFor="current-password">Current Password</Label>
               <Input
                 id="current-password"
                 type="password"
                 placeholder="••••••••"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                disabled={saving}
              />
             </div>
             <div className="space-y-2">
@@ -64,6 +153,9 @@ export function PasswordManagement({ onBack }: PasswordManagementProps) {
                 id="new-password"
                 type="password"
                 placeholder="••••••••"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={saving}
              />
             </div>
             <div className="space-y-2">
@@ -72,36 +164,11 @@ export function PasswordManagement({ onBack }: PasswordManagementProps) {
                 id="confirm-password"
                 type="password"
                 placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={saving}
              />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-[#6B5FE4]">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Fingerprint className="w-5 h-5 text-[#6B5FE4]" />
-              <CardTitle className="text-base">Biometric Authentication</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex-1">
-                <p className="font-medium">Enable Biometric Login</p>
-                <p className="text-sm text-gray-600">Use fingerprint or face ID to sign in</p>
-              </div>
-              <Switch
-                checked={biometricEnabled}
-                onCheckedChange={setBiometricEnabled}
-             />
-            </div>
-            {biometricEnabled && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-gray-700">
-                  <strong>Note:</strong> You'll be prompted to set up biometric authentication on your next login.
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -112,14 +179,73 @@ export function PasswordManagement({ onBack }: PasswordManagementProps) {
             </p>
           </CardContent>
         </Card>
+
+        <Card className="border-l-4 border-l-red-500">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-500" />
+              <CardTitle className="text-base">Delete Account</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-gray-600">
+              Permanently deletes your account and every student, observation, and evaluation you've recorded. This cannot be undone.
+            </p>
+            {!showDeleteConfirm ? (
+              <Button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete My Account
+              </Button>
+            ) : (
+              <div className="space-y-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                {deleteError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{deleteError}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="delete-password">Enter your password to confirm</Label>
+                  <Input
+                    id="delete-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    disabled={deleting}
+                 />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                     onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); setDeleteError(''); }}
+                    disabled={deleting}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleDeleteAccount}
+                    disabled={deleting}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white gap-2"
+                  >
+                    {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Permanently Delete
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="p-4 bg-white/80 backdrop-blur-sm border-t">
         <Button
           onClick={handleSave}
+          disabled={saving}
           className="w-full h-12 bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] hover:from-[#1A1A40]/90 hover:to-[#6B5FE4]/90 font-semibold gap-2"
         >
-          <Save className="w-5 h-5" />
+          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
           Save Security Settings
         </Button>
       </div>

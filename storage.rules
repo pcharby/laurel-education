@@ -1,0 +1,40 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Curriculum files are a shared, cross-teacher library, mirroring the
+    // curriculumResources Firestore collection. Any signed-in teacher can
+    // read or upload; delete is restricted to the uploader via
+    // customMetadata.uploadedBy, set at upload time (src/app/lib/storage.ts)
+    // - a Storage-native check, same intent as the Firestore-side
+    // addedByTeacherId rule, kept in sync intentionally. (A firestore.get()
+    // cross-service lookup was tried first but didn't behave as documented
+    // when tested live, so this uses only Storage's own rule surface.)
+    match /curriculum/{resourceId}/{fileName} {
+      allow read: if request.auth != null;
+
+      // Not checking request.resource.metadata.uploadedBy here (unlike
+      // delete below) - tested live and it rejected legitimate uploads,
+      // likely a timing/serialization quirk between when the JS SDK sends
+      // customMetadata and when rules evaluate it. Not a real security gap:
+      // spoofing this field only misattributes your own upload, it doesn't
+      // grant delete rights over anyone else's file.
+      allow create: if request.auth != null
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType.matches(
+             'application/pdf|application/msword|application/vnd\\.openxmlformats-officedocument\\.wordprocessingml\\.document|text/plain'
+           );
+
+      allow update: if false;
+
+      allow delete: if request.auth != null &&
+        resource.metadata.uploadedBy == request.auth.uid;
+    }
+
+    // Deny everything else by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

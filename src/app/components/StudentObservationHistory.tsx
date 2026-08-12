@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader } from './ui/card';
 import { Badge } from './ui/badge';
 import { ArrowLeft, FileText, Mic, Image as ImageIcon, Trash2, Calendar, Tag } from 'lucide-react';
 import { format } from 'date-fns';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface StudentObservationHistoryProps {
   student: Student;
@@ -15,21 +16,23 @@ interface StudentObservationHistoryProps {
 }
 
 export function StudentObservationHistory({ student, onBack }: StudentObservationHistoryProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   const [observations, setObservations] = useState<Observation[]>([]);
   const [filter, setFilter] = useState<string>('all');
 
   const loadObservations = () => {
-    const obs = getObservationsByStudent(student.id);
-    setObservations(obs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+    getObservationsByStudent(student.id).then(obs => {
+      setObservations(obs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+    });
   };
 
   useEffect(() => {
     loadObservations();
   }, [student.id]);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this observation?')) {
-      deleteObservation(id);
+      await deleteObservation(id);
       loadObservations();
     }
   };
@@ -68,13 +71,13 @@ export function StudentObservationHistory({ student, onBack }: StudentObservatio
             <Button  size="sm" onClick={onBack} className="text-white hover:bg-white/20">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="sm" inverted={true} showProductName />
+            <LaurelLogo height="sm" inverted={true} showProductName />
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-white/80">Riverside Elem.</div>
+            <div className="text-xs text-white/80">{schoolName}</div>
           </div>
         </div>
         <h1 className="text-xl font-semibold mb-1">Observation History</h1>

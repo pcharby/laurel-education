@@ -18,14 +18,15 @@ interface AddStudentDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  defaultGrade?: string;
 }
 
-export function AddStudentDialog({ open, onClose, onSuccess }: AddStudentDialogProps) {
+export function AddStudentDialog({ open, onClose, onSuccess, defaultGrade }: AddStudentDialogProps) {
   const [name, setName] = useState('');
-  const [grade, setGrade] = useState('');
+  const [grade, setGrade] = useState(defaultGrade ?? '');
   const [error, setError] = useState('');
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim()) {
       setError('Please enter student name');
       return;
@@ -34,8 +35,7 @@ export function AddStudentDialog({ open, onClose, onSuccess }: AddStudentDialogP
       setError('Please enter grade');
       return;
     }
-
-    const existingStudents = getStudents();
+    const existingStudents = await getStudents();
     const duplicate = existingStudents.find(
       s => s.name.toLowerCase() === name.trim().toLowerCase()
     );
@@ -45,14 +45,14 @@ export function AddStudentDialog({ open, onClose, onSuccess }: AddStudentDialogP
       return;
     }
 
-    const newStudent: Student = {
+    const newStudent: Omit<Student, 'teacherId'> = {
       id: `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: name.trim(),
       grade: grade.trim(),
       createdAt: new Date().toISOString(),
     };
 
-    saveStudent(newStudent);
+    await saveStudent(newStudent);
     setName('');
     setGrade('');
     setError('');

@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Student } from '../lib/types';
+import { Student, SchoolClass } from '../lib/types';
 import { getStudents } from '../lib/storage';
+import { auth } from '../../firebase';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { ArrowLeft, Search, UserCircle } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { ArrowLeft, Search, UserCircle, UserPlus } from 'lucide-react';
+import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
+import { AddStudentDialog } from './AddStudentDialog';
 
 interface MobileStudentSelectorProps {
   onSelectStudent: (student: Student) => void;
   onBack: () => void;
   observationType: 'text' | 'audio' | 'image';
-  classInfo: { id: string; name: string; subject: string };
+  classInfo: SchoolClass;
 }
 
 export function MobileStudentSelector({
@@ -21,28 +23,38 @@ export function MobileStudentSelector({
   classInfo
 }: MobileStudentSelectorProps) {
   const [students, setStudents] = useState<Student[]>([]);
+  const [hasAnyStudents, setHasAnyStudents] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAddDialog, setShowAddDialog] = useState(false);
+
+  const loadStudents = () => {
+    getStudents().then(stored => {
+      if (stored.length === 0 && auth.currentUser?.isAnonymous) {
+        const demoTeacherId = auth.currentUser.uid;
+        const mockStudents: Student[] = [
+          { id: '1', teacherId: demoTeacherId, name: 'Emma Thompson', grade: '5', createdAt: new Date().toISOString() },
+          { id: '2', teacherId: demoTeacherId, name: 'Liam Chen', grade: '5', createdAt: new Date().toISOString() },
+          { id: '3', teacherId: demoTeacherId, name: 'Sophia Martinez', grade: '5', createdAt: new Date().toISOString() },
+          { id: '4', teacherId: demoTeacherId, name: 'Noah Patel', grade: '5', createdAt: new Date().toISOString() },
+          { id: '5', teacherId: demoTeacherId, name: 'Olivia Johnson', grade: '5', createdAt: new Date().toISOString() },
+          { id: '6', teacherId: demoTeacherId, name: 'Ethan Williams', grade: '5', createdAt: new Date().toISOString() },
+          { id: '7', teacherId: demoTeacherId, name: 'Ava Brown', grade: '5', createdAt: new Date().toISOString() },
+          { id: '8', teacherId: demoTeacherId, name: 'Mason Davis', grade: '5', createdAt: new Date().toISOString() },
+          { id: '9', teacherId: demoTeacherId, name: 'Isabella Garcia', grade: '5', createdAt: new Date().toISOString() },
+          { id: '10', teacherId: demoTeacherId, name: 'James Wilson', grade: '5', createdAt: new Date().toISOString() },
+        ];
+        setHasAnyStudents(mockStudents.length > 0);
+        setStudents(mockStudents.filter(s => s.grade === classInfo.grade));
+      } else {
+        setHasAnyStudents(stored.length > 0);
+        setStudents(stored.filter(s => s.grade === classInfo.grade));
+      }
+    });
+  };
 
   useEffect(() => {
-    const stored = getStudents();
-    if (stored.length === 0) {
-      const mockStudents: Student[] = [
-        { id: '1', name: 'Emma Thompson', grade: '5', createdAt: new Date().toISOString() },
-        { id: '2', name: 'Liam Chen', grade: '5', createdAt: new Date().toISOString() },
-        { id: '3', name: 'Sophia Martinez', grade: '5', createdAt: new Date().toISOString() },
-        { id: '4', name: 'Noah Patel', grade: '5', createdAt: new Date().toISOString() },
-        { id: '5', name: 'Olivia Johnson', grade: '5', createdAt: new Date().toISOString() },
-        { id: '6', name: 'Ethan Williams', grade: '5', createdAt: new Date().toISOString() },
-        { id: '7', name: 'Ava Brown', grade: '5', createdAt: new Date().toISOString() },
-        { id: '8', name: 'Mason Davis', grade: '5', createdAt: new Date().toISOString() },
-        { id: '9', name: 'Isabella Garcia', grade: '5', createdAt: new Date().toISOString() },
-        { id: '10', name: 'James Wilson', grade: '5', createdAt: new Date().toISOString() },
-      ];
-      setStudents(mockStudents);
-    } else {
-      setStudents(stored);
-    }
-  }, []);
+    loadStudents();
+  }, [classInfo.grade]);
 
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -64,12 +76,13 @@ export function MobileStudentSelector({
             <Button  size="sm" onClick={onBack}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="md" showProductName />
+            <LaurelLogo height="md" showProductName />
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
-            </div>
+            <Button size="sm" onClick={() => setShowAddDialog(true)} className="gap-2">
+              <UserPlus className="w-4 h-4" />
+              Add Student
+            </Button>
           </div>
         </div>
         <h2 className="font-semibold mb-1 text-gray-900">{classInfo.subject}</h2>
@@ -87,32 +100,58 @@ export function MobileStudentSelector({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4" style={{ backgroundColor: 'rgba(91, 155, 213, 0.08)' }}>
-        <div className="space-y-2">
-          {filteredStudents.map(student => (
-            <Button
-              key={student.id}
-              onClick={() => onSelectStudent(student)}
-              
-              className="w-full h-auto p-3 bg-white/95 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all justify-start border-2"
-              style={{
-                borderLeft: `4px solid ${getTypeColor()}`,
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${getTypeColor()}20` }}
-                >
-                  <UserCircle className="w-6 h-6" style={{ color: getTypeColor() }} />
+        {filteredStudents.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <UserCircle className="w-16 h-16 text-gray-300 mb-4" />
+            <p className="text-gray-500 mb-4">
+              {students.length === 0
+                ? hasAnyStudents
+                  ? `No students in Grade ${classInfo.grade} yet. Add one to get started with this class.`
+                  : 'No students yet. Add your first student to get started.'
+                : 'No students match your search.'}
+            </p>
+            {students.length === 0 && (
+              <Button onClick={() => setShowAddDialog(true)} className="gap-2">
+                <UserPlus className="w-4 h-4" />
+                Add Student
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredStudents.map(student => (
+              <Button
+                key={student.id}
+                onClick={() => onSelectStudent(student)}
+
+                className="w-full h-auto p-3 bg-white/95 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all justify-start border-2"
+                style={{
+                  borderLeft: `4px solid ${getTypeColor()}`,
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${getTypeColor()}20` }}
+                  >
+                    <UserCircle className="w-6 h-6" style={{ color: getTypeColor() }} />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium text-base text-gray-900">{formatStudentName(student.name)}</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className="font-medium text-base text-gray-900">{formatStudentName(student.name)}</p>
-                </div>
-              </div>
-            </Button>
-          ))}
-        </div>
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
+
+      <AddStudentDialog
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onSuccess={loadStudents}
+        defaultGrade={classInfo.grade}
+      />
     </div>
   );
 }

@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { Student } from './lib/types';
+import { useEffect, useState } from 'react';
+import { onAuthStateChanged, signInAnonymously, signOut, type User } from 'firebase/auth';
+import { auth } from '../firebase';
+import { Student, SchoolClass } from './lib/types';
 import { LoginScreen } from './components/LoginScreen';
 import { ClassSelector } from './components/ClassSelector';
 import { MobileObservationTypeSelector } from './components/MobileObservationTypeSelector';
@@ -8,12 +10,15 @@ import { StudentSummarySelector } from './components/StudentSummarySelector';
 import { StudentSummaryView } from './components/StudentSummaryView';
 import { ReportGenerationView } from './components/ReportGenerationView';
 import { StudentObservationHistory } from './components/StudentObservationHistory';
+import { StudentDataExport } from './components/StudentDataExport';
 import { ClassInsightsDashboard } from './components/ClassInsightsDashboard';
 import { CustomRubricsConfig } from './components/CustomRubricsConfig';
 import { SettingsMenu } from './components/SettingsMenu';
 import { ClassesAndSubjectsConfig } from './components/ClassesAndSubjectsConfig';
 import { CurriculumConfig } from './components/CurriculumConfig';
 import { PasswordManagement } from './components/PasswordManagement';
+import { ReportProblem } from './components/ReportProblem';
+import { SchoolProfile } from './components/SchoolProfile';
 import { AddObservationDialog } from './components/AddObservationDialog';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
@@ -28,29 +33,45 @@ type View =
   | 'student-summary'
   | 'report-generation'
   | 'observation-history'
+  | 'data-export'
   | 'class-insights'
   | 'custom-rubrics'
   | 'settings'
   | 'classes-and-subjects'
   | 'curriculum'
-  | 'password-management';
+  | 'password-management'
+  | 'report-problem'
+  | 'school-profile';
 
 export default function App() {
+  const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
   const [view, setView] = useState<View>('login');
-  const [selectedClass, setSelectedClass] = useState<{ id: string; name: string; subject: string } | null>(null);
+  const [selectedClass, setSelectedClass] = useState<SchoolClass | null>(null);
   const [selectedType, setSelectedType] = useState<'text' | 'audio' | 'image' | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      setView(user ? 'class-selection' : 'login');
+    });
+    return unsubscribe;
+  }, []);
+
   const handleLogin = () => {
-    setView('class-selection');
+    // Navigation happens via onAuthStateChanged once Firebase confirms the session.
   };
 
-  const handleDemo = () => {
-    setView('class-selection');
-    toast.success('Welcome to the Laurel Education Demo!');
+  const handleDemo = async () => {
+    try {
+      await signInAnonymously(auth);
+      toast.success('Welcome to the Laurel Education Demo!');
+    } catch {
+      toast.error('Could not start the demo. Please try again.');
+    }
   };
 
-  const handleSelectClass = (classInfo: { id: string; name: string; subject: string }) => {
+  const handleSelectClass = (classInfo: SchoolClass) => {
     setSelectedClass(classInfo);
     setView('type-selection');
   };
@@ -119,6 +140,14 @@ export default function App() {
     setView('student-summary');
   };
 
+  const handleExportData = () => {
+    setView('data-export');
+  };
+
+  const handleBackFromExport = () => {
+    setView('student-summary');
+  };
+
   const handleClassInsights = () => {
     setView('class-insights');
   };
@@ -159,8 +188,24 @@ export default function App() {
     setView('settings');
   };
 
-  const handleLogout = () => {
-    setView('login');
+  const handleReportProblem = () => {
+    setView('report-problem');
+  };
+
+  const handleBackFromReportProblem = () => {
+    setView('settings');
+  };
+
+  const handleSchoolProfile = () => {
+    setView('school-profile');
+  };
+
+  const handleBackFromSchoolProfile = () => {
+    setView('settings');
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
     toast.success('Logged out successfully');
   };
 
@@ -171,6 +216,14 @@ export default function App() {
   const handleBackFromSettings = () => {
     setView('class-selection');
   };
+
+  if (authUser === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1A1A40] via-[#2E2B6E] to-[#6B5FE4]">
+        <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -184,6 +237,7 @@ export default function App() {
           onViewStudentSummary={handleViewStudentSummary}
           onLogout={handleLogout}
           onSettings={handleSettings}
+          onManageClasses={handleClassesAndSubjects}
         />
       )}
 
@@ -218,6 +272,7 @@ export default function App() {
           onBack={handleBackToSummarySelection}
           onGenerateReport={handleGenerateReport}
           onViewObservations={handleViewObservations}
+          onExportData={handleExportData}
         />
       )}
 
@@ -225,6 +280,13 @@ export default function App() {
         <StudentObservationHistory
           student={selectedStudent}
           onBack={handleBackFromObservations}
+        />
+      )}
+
+      {view === 'data-export' && selectedStudent && (
+        <StudentDataExport
+          student={selectedStudent}
+          onBack={handleBackFromExport}
         />
       )}
 
@@ -245,7 +307,13 @@ export default function App() {
           onClassesAndSubjects={handleClassesAndSubjects}
           onCurriculum={handleCurriculum}
           onPasswordManagement={handlePasswordManagement}
+          onReportProblem={handleReportProblem}
+          onSchoolProfile={handleSchoolProfile}
         />
+      )}
+
+      {view === 'school-profile' && (
+        <SchoolProfile onBack={handleBackFromSchoolProfile} />
       )}
 
       {view === 'classes-and-subjects' && (
@@ -260,6 +328,10 @@ export default function App() {
 
       {view === 'password-management' && (
         <PasswordManagement onBack={handleBackFromPasswordManagement} />
+      )}
+
+      {view === 'report-problem' && (
+        <ReportProblem onBack={handleBackFromReportProblem} />
       )}
 
       {view === 'report-generation' && selectedStudent && (

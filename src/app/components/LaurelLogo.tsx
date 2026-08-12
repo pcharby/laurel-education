@@ -1,4 +1,5 @@
-import logoImage from '../../imports/LaurelEducationLogo-1.png';
+import logoOnlyImage from '../../imports/LaurelLogoOnly.png';
+import logoWithTextImage from '../../imports/LaurelEducationLogo.png';
 
 interface LaurelLogoProps {
   height?: 'sm' | 'md' | 'lg' | 'xl';
@@ -7,7 +8,7 @@ interface LaurelLogoProps {
   showProductName?: boolean;
 }
 
-export function LaurelLogo({ height = 'md', className = '', inverted = false }: LaurelLogoProps) {
+export function LaurelLogo({ height = 'md', className = '', inverted = false, showProductName = false }: LaurelLogoProps) {
   const heightMap = {
     sm: 'h-8',
     md: 'h-10',
@@ -18,13 +19,10 @@ export function LaurelLogo({ height = 'md', className = '', inverted = false }: 
   return (
     <div className={`${heightMap[height]} ${className}`}>
       <img
-        src={logoImage}
+        src={showProductName ? logoWithTextImage : logoOnlyImage}
         alt="Laurel Education"
         className={`h-full w-auto object-contain ${inverted ? 'brightness-0 invert' : ''}`}
       />
     </div>
   );
 }
-
-// Backward-compatible alias
-export const CadentLogo = LaurelLogo;

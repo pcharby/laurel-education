@@ -1,51 +1,77 @@
 import { useState, useEffect } from 'react';
-import { Student } from '../lib/types';
+import { Student, Observation } from '../lib/types';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Copy, CheckCircle, Loader2, TrendingUp, BarChart } from 'lucide-react';
-import { Progress } from './ui/progress';
+import { Alert, AlertDescription } from './ui/alert';
+import { ArrowLeft, Copy, CheckCircle, Loader2, TrendingUp, BarChart, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
+import { getObservationsByStudent } from '../lib/storage';
+import { generateMockEvaluation } from '../lib/mock-ai';
+import { generateEvaluation as generateAIEvaluation } from '../lib/ai';
+import { auth } from '../../firebase';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface ReportGenerationViewProps {
   student: Student;
   onBack: () => void;
 }
 
+interface SubjectReport {
+  subject: string;
+  observationCount: number;
+  commentary: string;
+}
+
 export function ReportGenerationView({ student, onBack }: ReportGenerationViewProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   const [isGenerating, setIsGenerating] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  const [reports, setReports] = useState<SubjectReport[]>([]);
+  const [totalObservations, setTotalObservations] = useState(0);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsGenerating(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
+    generateReports();
+  }, [student.id]);
 
-  const subjects = [
-    {
-      name: 'Mathematics',
-      grade: 'B+',
-      score: 78,
-      commentary: `${formatStudentName(student.name)} demonstrates strong mathematical reasoning and problem-solving abilities. Shows consistent engagement with complex concepts and actively participates in class discussions. Excels in collaborative learning activities and demonstrates a solid understanding of grade-level curriculum expectations. Recommended area for growth: continue building confidence with multi-step word problems.`,
-      curriculum: ['Number Sense', 'Algebraic Thinking', 'Problem Solving'],
-    },
-    {
-      name: 'Science',
-      grade: 'A-',
-      score: 85,
-      commentary: `${formatStudentName(student.name)} exhibits exceptional curiosity and scientific inquiry skills. Consistently asks thoughtful questions and demonstrates strong understanding of scientific concepts through hands-on experiments. Shows excellent ability to make connections between classroom learning and real-world applications. Continue encouraging independent investigation and hypothesis formation.`,
-      curriculum: ['Scientific Inquiry', 'Life Systems', 'Critical Thinking'],
-    },
-    {
-      name: 'Language Arts',
-      grade: 'B',
-      score: 72,
-      commentary: `${formatStudentName(student.name)} shows steady progress in reading comprehension and written expression. Demonstrates creativity in written assignments and thoughtful analysis of texts. Active participant in literature discussions with peers. Growth opportunity: continue developing organizational strategies for longer writing assignments and building confidence in public presentations.`,
-      curriculum: ['Reading Comprehension', 'Written Communication', 'Oral Communication'],
-    },
-  ];
+  const generateReports = async () => {
+    setIsGenerating(true);
+    setError('');
+    setReports([]);
+
+    try {
+      const observations = await getObservationsByStudent(student.id);
+      setTotalObservations(observations.length);
+
+      const bySubject = new Map<string, Observation[]>();
+      for (const obs of observations) {
+        const key = obs.subject || 'General';
+        bySubject.set(key, [...(bySubject.get(key) ?? []), obs]);
+      }
+
+      const generate = auth.currentUser?.isAnonymous ? generateMockEvaluation : generateAIEvaluation;
+
+      const results = await Promise.all(
+        Array.from(bySubject.entries()).map(async ([subject, subjectObservations]) => {
+          const result = await generate(subjectObservations, student.name);
+          return {
+            subject,
+            observationCount: subjectObservations.length,
+            commentary: result.summary,
+          };
+        })
+      );
+
+      setReports(results);
+    } catch {
+      setError('Could not generate the report right now. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleCopy = (subject: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -57,7 +83,7 @@ export function ReportGenerationView({ student, onBack }: ReportGenerationViewPr
   if (isGenerating) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <CadentLogo height="md"  className="mb-6" />
+        <LaurelLogo height="md"  className="mb-6" />
         <Loader2 className="w-12 h-12 animate-spin text-[#6B5FE4] mb-4" />
         <p className="text-lg text-gray-700">Generating Report Card Commentary...</p>
         <p className="text-sm text-gray-500 mt-2">Analyzing observations across all subjects</p>
@@ -73,13 +99,13 @@ export function ReportGenerationView({ student, onBack }: ReportGenerationViewPr
             <Button  size="sm" onClick={onBack} className="text-white hover:bg-white/20">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="sm" inverted={true} showProductName />
+            <LaurelLogo height="sm" inverted={true} showProductName />
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-white/80">Riverside Elem.</div>
+            <div className="text-xs text-white/80">{schoolName}</div>
           </div>
         </div>
         <h1 className="text-xl font-semibold mb-1">Report Card Commentary</h1>
@@ -87,84 +113,99 @@ export function ReportGenerationView({ student, onBack }: ReportGenerationViewPr
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <Card className="border-l-4 border-l-[#6B5FE4]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <BarChart className="w-5 h-5 text-[#6B5FE4]" />
-              <h3 className="font-semibold">Overall Performance Summary</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              {subjects.map((s) => (
-                <div key={s.name} className="space-y-1">
-                  <p className="text-xs text-gray-600">{s.name}</p>
-                  <div className="text-2xl font-bold text-[#6B5FE4]">{s.grade}</div>
-                  <Progress value={s.score} className="h-1" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {subjects.map((subject) => (
-          <Card key={subject.name} className="border-l-4 border-l-[#7D9D77]">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-base mb-2 text-gray-900">{subject.name}</CardTitle>
-                  <div className="flex flex-wrap gap-1">
-                    {subject.curriculum.map((item) => (
-                      <Badge key={item}  className="text-xs">
-                        {item}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-[#7D9D77]">{subject.grade}</div>
-                  <div className="text-xs text-gray-500">{subject.score}%</div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="bg-gray-50 rounded-lg p-3 text-sm leading-relaxed">
-                {subject.commentary}
-              </div>
-              <Button
-                onClick={() => handleCopy(subject.name, subject.commentary)}
-                
-                size="sm"
-                className="w-full gap-2"
-              >
-                {copied === subject.name ? (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    Copy Commentary
-                  </>
-                )}
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription className="flex items-center justify-between gap-4">
+              <span>{error}</span>
+              <Button size="sm" onClick={generateReports} className="gap-2 shrink-0">
+                <RefreshCw className="w-4 h-4" />
+                Try Again
               </Button>
+            </AlertDescription>
+          </Alert>
+        ) : reports.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <BarChart className="w-16 h-16 text-gray-300 mb-4" />
+              <p className="text-gray-500">
+                No observations recorded yet for {formatStudentName(student.name)}. Add observations to generate report card commentary.
+              </p>
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          <>
+            <Card className="border-l-4 border-l-[#6B5FE4]">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <BarChart className="w-5 h-5 text-[#6B5FE4]" />
+                  <h3 className="font-semibold">Overview</h3>
+                </div>
+                <div className="grid gap-3 text-center" style={{ gridTemplateColumns: `repeat(${reports.length}, minmax(0, 1fr))` }}>
+                  {reports.map((r) => (
+                    <div key={r.subject} className="space-y-1">
+                      <p className="text-xs text-gray-600">{r.subject}</p>
+                      <div className="text-2xl font-bold text-[#6B5FE4]">{r.observationCount}</div>
+                      <p className="text-xs text-gray-500">observation{r.observationCount === 1 ? '' : 's'}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="bg-gradient-to-br from-[#6B5FE4]/10 to-[#7D9D77]/10 border-2 border-[#D4D0EE]">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-2">
-              <TrendingUp className="w-5 h-5 text-[#6B5FE4] shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold mb-2">Next Steps</h3>
-                <p className="text-sm text-gray-700">
-                  These AI-generated commentaries align with curriculum expectations.
-                  Review and customize before final submission to report card software.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            {reports.map((report) => (
+              <Card key={report.subject} className="border-l-4 border-l-[#7D9D77]">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-base mb-2 text-gray-900">{report.subject}</CardTitle>
+                      <Badge  className="text-xs">
+                        {report.observationCount} observation{report.observationCount === 1 ? '' : 's'}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="bg-gray-50 rounded-lg p-3 text-sm leading-relaxed">
+                    {report.commentary}
+                  </div>
+                  <Button
+                    onClick={() => handleCopy(report.subject, report.commentary)}
+
+                    size="sm"
+                    className="w-full gap-2"
+                  >
+                    {copied === report.subject ? (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy Commentary
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+
+            <Card className="bg-gradient-to-br from-[#6B5FE4]/10 to-[#7D9D77]/10 border-2 border-[#D4D0EE]">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="w-5 h-5 text-[#6B5FE4] shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold mb-2">Next Steps</h3>
+                    <p className="text-sm text-gray-700">
+                      This commentary is generated from {totalObservations} recorded observation{totalObservations === 1 ? '' : 's'}.
+                      Review and customize before final submission to report card software.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );

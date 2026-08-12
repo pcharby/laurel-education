@@ -1,32 +1,34 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { CurriculumResource, SchoolClass } from '../lib/types';
+import {
+  getTeacherProfile,
+  saveTeacherProfile,
+  getClasses,
+  getCurriculumResources,
+  addCurriculumLink,
+  uploadCurriculumFile,
+  deleteCurriculumResource,
+} from '../lib/storage';
+import { auth } from '../../firebase';
+import { JURISDICTION_GROUPS } from '../lib/jurisdictions';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
-import { ArrowLeft, Save, BookOpen, Calendar, Plus, Upload, FileText, X, Check } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import { ArrowLeft, Save, BookOpen, Upload, Link as LinkIcon, FileText, X, Check, Loader2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
-import { CadentLogo } from './CadentLogo';
-
-interface Expectation {
-  id: string;
-  text: string;
-}
-
-interface LessonPlan {
-  id: string;
-  title: string;
-  description: string;
-}
-
-interface SubjectData {
-  name: string;
-  grade: string;
-  expectations: Expectation[];
-  lessonPlans: LessonPlan[];
-}
+import { LaurelLogo } from './LaurelLogo';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface CurriculumConfigProps {
   onBack: () => void;
@@ -34,130 +36,128 @@ interface CurriculumConfigProps {
 }
 
 export function CurriculumConfig({ onBack, onCustomRubrics }: CurriculumConfigProps) {
-  const [subjects, setSubjects] = useState<SubjectData[]>([
-    {
-      name: 'Mathematics', grade: '5',
-      expectations: [
-        { id: 'e1', text: 'Unit 3: Fractions & Decimals' },
-        { id: 'e2', text: 'Unit 4: Data Management' },
-      ],
-      lessonPlans: [
-        { id: 'lp1', title: 'Intro to Fractions', description: 'Hands-on fraction tiles activity' },
-        { id: 'lp2', title: 'Decimal Place Value', description: 'Number line exploration' },
-      ],
-    },
-    {
-      name: 'Science', grade: '5',
-      expectations: [
-        { id: 'e3', text: 'Matter and Materials' },
-        { id: 'e4', text: 'Energy and Control' },
-      ],
-      lessonPlans: [
-        { id: 'lp3', title: 'States of Matter', description: 'Lab: observing phase changes' },
-      ],
-    },
-    {
-      name: 'Language Arts', grade: '5',
-      expectations: [
-        { id: 'e5', text: 'Reading Comprehension Strategies' },
-        { id: 'e6', text: 'Narrative Writing' },
-      ],
-      lessonPlans: [
-        { id: 'lp4', title: 'Story Structure', description: 'Analyzing plot arcs in short stories' },
-      ],
-    },
-  ]);
+  const { schoolName, badgeLetter } = useSchoolName();
+  const [jurisdiction, setJurisdiction] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [jurisdictionDraft, setJurisdictionDraft] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
-  // Uploaded curriculum files
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [classesLoading, setClassesLoading] = useState(true);
+  const [selectedClassKey, setSelectedClassKey] = useState<string>('');
+
+  const [resources, setResources] = useState<CurriculumResource[]>([]);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
+
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [addMode, setAddMode] = useState<'link' | 'file'>('link');
+  const [title, setTitle] = useState('');
+  const [externalUrl, setExternalUrl] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Add Expectation dialog
-  const [expectationDialog, setExpectationDialog] = useState<{ open: boolean; subjectName: string } | null>(null);
-  const [newExpectation, setNewExpectation] = useState('');
+  useEffect(() => {
+    getTeacherProfile().then(profile => {
+      setJurisdiction(profile?.jurisdiction ?? null);
+      setJurisdictionDraft(profile?.jurisdiction ?? '');
+      setProfileLoading(false);
+    });
+    getClasses().then(result => {
+      setClasses(result);
+      setClassesLoading(false);
+      if (result.length > 0) {
+        setSelectedClassKey(`${result[0].subject}|${result[0].grade}`);
+      }
+    });
+  }, []);
 
-  // Add Lesson Plan dialog
-  const [lessonDialog, setLessonDialog] = useState<{ open: boolean; subjectName: string } | null>(null);
-  const [newLesson, setNewLesson] = useState({ title: '', description: '' });
+  const subjectGradeOptions = Array.from(
+    new Map(classes.map(c => [`${c.subject}|${c.grade}`, c])).values()
+  );
+  const [selectedSubject, selectedGrade] = selectedClassKey.split('|');
 
-  // --- Upload Curriculum ---
-  const handleUploadClick = () => fileInputRef.current?.click();
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
-    const names = files.map(f => f.name);
-    setUploadedFiles(prev => [...prev, ...names]);
-    toast.success(`${names.length} file${names.length !== 1 ? 's' : ''} uploaded: ${names.join(', ')}`);
-    e.target.value = '';
+  const loadResources = () => {
+    if (!jurisdiction || !selectedSubject || !selectedGrade) return;
+    setResourcesLoading(true);
+    getCurriculumResources(jurisdiction, selectedGrade, selectedSubject).then(result => {
+      setResources(result);
+      setResourcesLoading(false);
+    });
   };
 
-  const removeFile = (name: string) => setUploadedFiles(prev => prev.filter(f => f !== name));
+  useEffect(() => {
+    loadResources();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jurisdiction, selectedClassKey]);
 
-  // --- Add Expectation ---
-  const openExpectationDialog = (subjectName: string) => {
-    setNewExpectation('');
-    setExpectationDialog({ open: true, subjectName });
+  const handleSaveJurisdiction = async () => {
+    if (!jurisdictionDraft) return;
+    setSavingProfile(true);
+    try {
+      await saveTeacherProfile({ jurisdiction: jurisdictionDraft });
+      setJurisdiction(jurisdictionDraft);
+      toast.success('Jurisdiction saved.');
+    } catch {
+      toast.error('Could not save your jurisdiction. Please try again.');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
-  const saveExpectation = () => {
-    const text = newExpectation.trim();
-    if (!text || !expectationDialog) return;
-    setSubjects(prev =>
-      prev.map(s =>
-        s.name === expectationDialog.subjectName
-          ? { ...s, expectations: [...s.expectations, { id: `e-${Date.now()}`, text }] }
-          : s
-      )
-    );
-    setExpectationDialog(null);
-    toast.success('Expectation added.');
+  const openAddDialog = () => {
+    setTitle('');
+    setExternalUrl('');
+    setFile(null);
+    setAddMode('link');
+    setShowAddDialog(true);
   };
 
-  const removeExpectation = (subjectName: string, id: string) => {
-    setSubjects(prev =>
-      prev.map(s =>
-        s.name === subjectName
-          ? { ...s, expectations: s.expectations.filter(e => e.id !== id) }
-          : s
-      )
-    );
+  const handleAddResource = async () => {
+    if (!title.trim() || !jurisdiction || !selectedSubject || !selectedGrade) return;
+    if (addMode === 'link' && !externalUrl.trim()) return;
+    if (addMode === 'file' && !file) return;
+
+    setSubmitting(true);
+    try {
+      if (addMode === 'link') {
+        await addCurriculumLink({
+          jurisdiction,
+          grade: selectedGrade,
+          subject: selectedSubject,
+          title: title.trim(),
+          externalUrl: externalUrl.trim(),
+        });
+      } else if (file) {
+        await uploadCurriculumFile(file, {
+          jurisdiction,
+          grade: selectedGrade,
+          subject: selectedSubject,
+          title: title.trim(),
+        });
+      }
+      toast.success('Resource added.');
+      setShowAddDialog(false);
+      loadResources();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not add this resource. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // --- Add Lesson Plan ---
-  const openLessonDialog = (subjectName: string) => {
-    setNewLesson({ title: '', description: '' });
-    setLessonDialog({ open: true, subjectName });
+  const handleDelete = async (resource: CurriculumResource) => {
+    if (!confirm(`Remove "${resource.title}"? This removes it for every teacher who can see this jurisdiction/grade/subject.`)) return;
+    try {
+      await deleteCurriculumResource(resource);
+      toast.success('Resource removed.');
+      loadResources();
+    } catch {
+      toast.error('Could not remove this resource. Please try again.');
+    }
   };
 
-  const saveLesson = () => {
-    const title = newLesson.title.trim();
-    if (!title || !lessonDialog) return;
-    setSubjects(prev =>
-      prev.map(s =>
-        s.name === lessonDialog.subjectName
-          ? { ...s, lessonPlans: [...s.lessonPlans, { id: `lp-${Date.now()}`, title, description: newLesson.description.trim() }] }
-          : s
-      )
-    );
-    setLessonDialog(null);
-    toast.success('Lesson plan added.');
-  };
-
-  const removeLessonPlan = (subjectName: string, id: string) => {
-    setSubjects(prev =>
-      prev.map(s =>
-        s.name === subjectName
-          ? { ...s, lessonPlans: s.lessonPlans.filter(lp => lp.id !== id) }
-          : s
-      )
-    );
-  };
-
-  const handleSave = () => {
-    toast.success('Curriculum updates saved successfully!');
-    onBack();
-  };
+  const currentTeacherId = auth.currentUser?.uid;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -167,250 +167,253 @@ export function CurriculumConfig({ onBack, onCustomRubrics }: CurriculumConfigPr
             <Button size="sm" onClick={onBack}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="md" showProductName />
+            <LaurelLogo height="md" showProductName />
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-gray-700">Riverside Elem.</div>
+            <div className="text-xs text-gray-700">{schoolName}</div>
           </div>
         </div>
         <h2 className="text-xl font-semibold text-foreground">Curriculum & Lesson Plans</h2>
-        <p className="text-sm text-muted-foreground">Update curriculum expectations and lesson plans</p>
+        <p className="text-sm text-muted-foreground">Browse and share curriculum resources with other teachers</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-
-        {/* Upload Curriculum */}
+        {/* Jurisdiction */}
         <Card className="border-l-4 border-l-[#6B5FE4]">
           <CardHeader>
-            <CardTitle className="text-base">Upload Curriculum Documents</CardTitle>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-[#6B5FE4]" />
+              <CardTitle className="text-base">Your Jurisdiction</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <button
-              type="button"
-              onClick={handleUploadClick}
-              className="w-full border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-[#6B5FE4] transition-colors cursor-pointer"
-            >
-              <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm font-medium mb-1">Upload Curriculum</p>
-              <p className="text-xs text-muted-foreground">Click to browse — PDF, Word, or text files</p>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept=".pdf,.doc,.docx,.txt"
-              multiple
-              onChange={handleFileChange}
-            />
-
-            {uploadedFiles.length > 0 && (
-              <div className="space-y-1">
-                {uploadedFiles.map(name => (
-                  <div key={name} className="flex items-center justify-between rounded-md bg-accent/40 px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#6B5FE4]" />
-                      <span className="text-sm truncate max-w-[220px]">{name}</span>
-                    </div>
-                    <button type="button" onClick={() => removeFile(name)} className="text-muted-foreground hover:text-red-500">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+            {profileLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-[#6B5FE4]" />
               </div>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Curriculum resources are shared between teachers in the same province/state, grade, and subject.
+                </p>
+                <div className="flex gap-2">
+                  <Select value={jurisdictionDraft} onValueChange={setJurisdictionDraft}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select your province or state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {JURISDICTION_GROUPS.map(group => (
+                        <SelectGroup key={group.label}>
+                          <SelectLabel>{group.label}</SelectLabel>
+                          {group.options.map(option => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleSaveJurisdiction}
+                    disabled={savingProfile || !jurisdictionDraft || jurisdictionDraft === jurisdiction}
+                    className="bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white gap-2 shrink-0"
+                  >
+                    {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save
+                  </Button>
+                </div>
+              </>
             )}
-
-            <Button
-              onClick={onCustomRubrics}
-              variant="outline"
-              className="w-full border-2 border-[#7D9D77] hover:bg-[#7D9D77]/10"
-            >
-              Configure Rubrics & Objectives
-            </Button>
           </CardContent>
         </Card>
 
-        {/* Per-subject cards */}
-        {subjects.map((subject) => (
-          <Card key={subject.name} className="border-l-4 border-l-[#7D9D77]">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-[#7D9D77]" />
-                <CardTitle className="text-base text-foreground">{subject.name} — Grade {subject.grade}</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-accent/50 rounded-lg p-3 border border-border">
-                  <div className="text-2xl font-bold text-[#6B5FE4]">{subject.expectations.length}</div>
-                  <div className="text-xs text-muted-foreground">Curriculum Expectations</div>
-                </div>
-                <div className="bg-accent/50 rounded-lg p-3 border border-border">
-                  <div className="text-2xl font-bold text-[#7D9D77]">{subject.lessonPlans.length}</div>
-                  <div className="text-xs text-muted-foreground">Lesson Plans</div>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  className="flex-1 gap-2 bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white"
-                  onClick={() => openExpectationDialog(subject.name)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Expectation
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1 gap-2 bg-[#6B5FE4] hover:bg-[#6B5FE4]/90 text-white"
-                  onClick={() => openLessonDialog(subject.name)}
-                >
-                  <Calendar className="w-4 h-4" />
-                  Add Lesson Plan
-                </Button>
-              </div>
-
-              {/* Expectations list */}
-              {subject.expectations.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Expectations</p>
-                  <div className="flex flex-wrap gap-2">
-                    {subject.expectations.map(exp => (
-                      <div key={exp.id} className="flex items-center gap-1 bg-accent rounded-full px-3 py-1">
-                        <span className="text-xs">{exp.text}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeExpectation(subject.name, exp.id)}
-                          className="text-muted-foreground hover:text-red-500 ml-1"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
+        {!jurisdiction ? (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              Set your jurisdiction above to browse and share curriculum resources.
+            </CardContent>
+          </Card>
+        ) : classesLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-[#6B5FE4]" />
+          </div>
+        ) : classes.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              Add a class in Classes & Subjects first - curriculum is browsed by the subjects and grades you teach.
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <Label>Subject & Grade</Label>
+                <Select value={selectedClassKey} onValueChange={setSelectedClassKey}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjectGradeOptions.map(c => (
+                      <SelectItem key={`${c.subject}|${c.grade}`} value={`${c.subject}|${c.grade}`}>
+                        {c.subject} — Grade {c.grade}
+                      </SelectItem>
                     ))}
-                  </div>
-                </div>
-              )}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
 
-              {/* Lesson plans list */}
-              {subject.lessonPlans.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lesson Plans</p>
-                  <div className="space-y-1">
-                    {subject.lessonPlans.map(lp => (
-                      <div key={lp.id} className="flex items-start justify-between rounded-md bg-accent/40 px-3 py-2">
-                        <div>
-                          <p className="text-sm font-medium">{lp.title}</p>
-                          {lp.description && <p className="text-xs text-muted-foreground">{lp.description}</p>}
-                        </div>
+            <Card className="border-l-4 border-l-[#7D9D77]">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-[#7D9D77]" />
+                    <CardTitle className="text-base">
+                      {selectedSubject} — Grade {selectedGrade} · {jurisdiction}
+                    </CardTitle>
+                  </div>
+                  <Button size="sm" className="gap-2 bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white" onClick={openAddDialog}>
+                    <Upload className="w-4 h-4" />
+                    Add Resource
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {resourcesLoading ? (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="w-5 h-5 animate-spin text-[#6B5FE4]" />
+                  </div>
+                ) : resources.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No curriculum resources yet for this jurisdiction/grade/subject. Be the first to add one.
+                  </p>
+                ) : (
+                  resources.map(resource => (
+                    <div key={resource.id} className="flex items-center justify-between rounded-md bg-accent/40 px-3 py-2">
+                      <a
+                        href={resource.type === 'link' ? resource.externalUrl : resource.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 min-w-0 hover:underline"
+                      >
+                        {resource.type === 'link' ? (
+                          <LinkIcon className="w-4 h-4 text-[#6B5FE4] shrink-0" />
+                        ) : (
+                          <FileText className="w-4 h-4 text-[#6B5FE4] shrink-0" />
+                        )}
+                        <span className="text-sm truncate">{resource.title}</span>
+                      </a>
+                      {resource.addedByTeacherId === currentTeacherId && (
                         <button
                           type="button"
-                          onClick={() => removeLessonPlan(subject.name, lp.id)}
-                          className="text-muted-foreground hover:text-red-500 ml-2 mt-0.5 shrink-0"
+                          onClick={() => handleDelete(resource)}
+                          className="text-muted-foreground hover:text-red-500 ml-2 shrink-0"
                         >
                           <X className="w-4 h-4" />
                         </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                      )}
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         <Card className="bg-accent/40 border-accent">
-          <CardContent className="p-4">
+          <CardContent className="p-4 flex items-center justify-between gap-3">
             <p className="text-sm text-foreground">
-              <strong>Note:</strong> Curriculum expectations and lesson plans help Laurel Education align observations with your teaching goals. AI-generated evaluations will reference these when creating report card commentary.
+              Rubrics and learning objectives are configured separately, per subject.
             </p>
+            <Button onClick={onCustomRubrics} variant="outline" className="shrink-0 border-2 border-[#7D9D77] hover:bg-[#7D9D77]/10">
+              Configure Rubrics
+            </Button>
           </CardContent>
         </Card>
       </div>
 
-      <div className="p-4 bg-white/80 backdrop-blur-sm border-t">
-        <Button
-          onClick={handleSave}
-          className="w-full h-12 bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4] hover:from-[#1A1A40]/90 hover:to-[#6B5FE4]/90 font-semibold gap-2"
-        >
-          <Save className="w-5 h-5" />
-          Save Curriculum Updates
-        </Button>
-      </div>
-
-      {/* Add Expectation Dialog */}
-      <Dialog
-        open={!!expectationDialog?.open}
-        onOpenChange={(open) => !open && setExpectationDialog(null)}
-      >
+      {/* Add Resource Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={(open) => !open && setShowAddDialog(false)}>
         <DialogContent aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle>Add Expectation — {expectationDialog?.subjectName}</DialogTitle>
+            <DialogTitle>Add Curriculum Resource</DialogTitle>
+            <DialogDescription>
+              Visible to every teacher browsing {selectedSubject} — Grade {selectedGrade} in {jurisdiction}.
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-2 space-y-2">
-            <Label>Curriculum Expectation</Label>
-            <Input
-              placeholder="e.g. Unit 5: Geometry and Spatial Sense"
-              value={newExpectation}
-              onChange={(e) => setNewExpectation(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && saveExpectation()}
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setExpectationDialog(null)}>Cancel</Button>
-            <Button
-              className="bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white gap-2"
-              onClick={saveExpectation}
-              disabled={!newExpectation.trim()}
-            >
-              <Check className="w-4 h-4" />
-              Add
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Lesson Plan Dialog */}
-      <Dialog
-        open={!!lessonDialog?.open}
-        onOpenChange={(open) => !open && setLessonDialog(null)}
-      >
-        <DialogContent aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>Add Lesson Plan — {lessonDialog?.subjectName}</DialogTitle>
-          </DialogHeader>
-          <div className="py-2 space-y-3">
+          <div className="space-y-4 py-2">
             <div className="space-y-1">
               <Label>Title</Label>
               <Input
-                placeholder="e.g. Introduction to Angles"
-                value={newLesson.title}
-                onChange={(e) => setNewLesson(l => ({ ...l, title: e.target.value }))}
+                placeholder="e.g. 2024 Grade 5 Math Curriculum"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 autoFocus
               />
             </div>
-            <div className="space-y-1">
-              <Label>Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
-              <Textarea
-                placeholder="Brief description of activities or objectives…"
-                value={newLesson.description}
-                onChange={(e) => setNewLesson(l => ({ ...l, description: e.target.value }))}
-                rows={3}
-              />
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={addMode === 'link' ? undefined : 'outline'}
+                className={addMode === 'link' ? 'flex-1 bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white' : 'flex-1'}
+                onClick={() => setAddMode('link')}
+              >
+                <LinkIcon className="w-4 h-4 mr-2" />
+                Link
+              </Button>
+              <Button
+                type="button"
+                variant={addMode === 'file' ? undefined : 'outline'}
+                className={addMode === 'file' ? 'flex-1 bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white' : 'flex-1'}
+                onClick={() => setAddMode('file')}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload File
+              </Button>
             </div>
+
+            {addMode === 'link' ? (
+              <div className="space-y-1">
+                <Label>URL</Label>
+                <Input
+                  placeholder="https://..."
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                />
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label>File</Label>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-[#6B5FE4] transition-colors cursor-pointer"
+                >
+                  <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-1" />
+                  <p className="text-sm font-medium">{file ? file.name : 'Click to browse'}</p>
+                  <p className="text-xs text-muted-foreground">PDF, Word, or text - 20MB max</p>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setLessonDialog(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
             <Button
-              className="bg-[#6B5FE4] hover:bg-[#6B5FE4]/90 text-white gap-2"
-              onClick={saveLesson}
-              disabled={!newLesson.title.trim()}
+              className="bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white gap-2"
+              onClick={handleAddResource}
+              disabled={submitting || !title.trim() || (addMode === 'link' ? !externalUrl.trim() : !file)}
             >
-              <Check className="w-4 h-4" />
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               Add
             </Button>
           </DialogFooter>

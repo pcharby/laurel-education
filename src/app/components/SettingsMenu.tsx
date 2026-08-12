@@ -1,17 +1,28 @@
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Lock, BookOpen, Calendar } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { ArrowLeft, Lock, BookOpen, Calendar, Bug, School } from 'lucide-react';
+import { LaurelLogo } from './LaurelLogo';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface SettingsMenuProps {
   onBack: () => void;
   onClassesAndSubjects: () => void;
   onCurriculum: () => void;
   onPasswordManagement: () => void;
+  onReportProblem: () => void;
+  onSchoolProfile: () => void;
 }
 
-export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPasswordManagement }: SettingsMenuProps) {
+export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPasswordManagement, onReportProblem, onSchoolProfile }: SettingsMenuProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   const settingsOptions = [
+    {
+      icon: School,
+      title: 'School Profile',
+      description: 'Set your school name, shown throughout the app',
+      color: '#4B5E7A',
+      onClick: onSchoolProfile,
+    },
     {
       icon: BookOpen,
       title: 'Classes & Subjects',
@@ -29,9 +40,16 @@ export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPas
     {
       icon: Lock,
       title: 'Password & Security',
-      description: 'Update password and enable biometric login',
+      description: 'Update your password or delete your account',
       color: '#767F93',
       onClick: onPasswordManagement,
+    },
+    {
+      icon: Bug,
+      title: 'Report a Problem',
+      description: 'Report a bug or send feedback',
+      color: '#D97706',
+      onClick: onReportProblem,
     },
   ];
 
@@ -43,13 +61,13 @@ export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPas
             <Button  size="sm" onClick={onBack} className="hover:bg-white/40">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <CadentLogo height="md" showProductName />
+            <LaurelLogo height="md" showProductName />
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
-              R
+              {badgeLetter}
             </div>
-            <div className="text-xs text-gray-700">Riverside Elem.</div>
+            <div className="text-xs text-gray-700">{schoolName}</div>
           </div>
         </div>
         <h2 className="text-2xl font-semibold text-gray-800">Settings</h2>
@@ -89,7 +107,7 @@ export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPas
       <div className="p-4 bg-white/80 backdrop-blur-sm border-t">
         <div className="text-center text-gray-600 text-xs">
           <p>Laurel Education v1.0.0</p>
-          <p className="mt-1">© 2026 Laurel Insight. All rights reserved.</p>
+          <p className="mt-1">© 2026 Laurel Education. All rights reserved.</p>
         </div>
       </div>
     </div>

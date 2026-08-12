@@ -1,12 +1,14 @@
 import { Button } from './ui/button';
 import { FileText, Mic, Camera, ArrowLeft, BarChart3 } from 'lucide-react';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
+import { SchoolClass } from '../lib/types';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface MobileObservationTypeSelectorProps {
   onSelectType: (type: 'text' | 'audio' | 'image') => void;
   onBack: () => void;
   onClassInsights: () => void;
-  classInfo: { name: string; subject: string };
+  classInfo: SchoolClass;
 }
 
 export function MobileObservationTypeSelector({
@@ -15,6 +17,7 @@ export function MobileObservationTypeSelector({
   onClassInsights,
   classInfo
 }: MobileObservationTypeSelectorProps) {
+  const { schoolName, badgeLetter } = useSchoolName();
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F7F5FC] to-[#EBE8F5] flex flex-col p-4">
       <div className="flex items-center justify-between mb-6">
@@ -22,19 +25,19 @@ export function MobileObservationTypeSelector({
           <Button  size="sm" onClick={onBack} className="hover:bg-white/40">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <CadentLogo height="md" showProductName />
+          <LaurelLogo height="md" showProductName />
         </div>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-xs">
-            R
+            {badgeLetter}
           </div>
-          <div className="text-xs text-gray-700">Riverside Elem.</div>
+          <div className="text-xs text-gray-700">{schoolName}</div>
         </div>
       </div>
 
       <div className="text-center mb-8">
         <h2 className="text-2xl font-semibold mb-1 text-gray-800">{classInfo.subject}</h2>
-        <p className="text-gray-600">{classInfo.name}</p>
+        <p className="text-gray-600">Grade {classInfo.grade}{classInfo.name ? ` — ${classInfo.name}` : ''}</p>
       </div>
 
       <div className="flex-1 flex items-center justify-center pb-8">

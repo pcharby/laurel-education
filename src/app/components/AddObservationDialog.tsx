@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Observation } from '../lib/types';
 import { saveObservation } from '../lib/storage';
-import { CadentLogo } from './CadentLogo';
+import { LaurelLogo } from './LaurelLogo';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Checkbox } from './ui/checkbox';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { FileText, Mic, Image as ImageIcon, X } from 'lucide-react';
+import { useSchoolName } from '../lib/useSchoolName';
 
 interface AddObservationDialogProps {
   open: boolean;
@@ -31,6 +32,14 @@ interface AddObservationDialogProps {
 }
 
 type PerformanceLevel = 'needs-support' | 'still-learning' | 'meets-expectations' | 'exceeds-expectations';
+
+// Live captioning via the browser's built-in Speech Recognition API (free,
+// on-device where supported - no server/API-key infrastructure). It only
+// runs on live mic input, not on the recorded blob, so it has to listen
+// alongside MediaRecorder rather than transcribing after the fact. Support
+// is Chrome/Edge-only as of this writing; other browsers fall back to
+// manual note-taking.
+const SpeechRecognitionCtor: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
 const getRubricsForSubject = (subject: string) => {
   switch (subject) {
@@ -74,6 +83,7 @@ export function AddObservationDialog({
   initialType = 'text',
   subject = '',
 }: AddObservationDialogProps) {
+  const { schoolName } = useSchoolName();
   const [type, setType] = useState<'text' | 'audio' | 'image'>(initialType);
   const [content, setContent] = useState('');
   const [selectedRubrics, setSelectedRubrics] = useState<string[]>([]);
@@ -121,6 +131,7 @@ export function AddObservationDialog({
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -145,21 +156,13 @@ export function AddObservationDialog({
         }
       };
 
-      recorder.onstop = async () => {
+      recorder.onstop = () => {
         const audioBlob = new Blob(chunks, { type: 'audio/webm' });
         const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
         setAudioChunks(chunks);
 
-        // Mock transcription
-        setIsTranscribing(true);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        const duration = Math.floor(recordingDuration);
-        setContent(`[Transcribed audio - ${duration}s recording]\n\nStudent demonstrated strong problem-solving skills during the mathematics activity. Showed excellent collaboration with peers and asked thoughtful questions about the concept being taught. Maintained focus throughout the lesson and actively participated in class discussion.`);
-        setIsTranscribing(false);
-
-        // Stop all tracks
+        recognitionRef.current?.stop();
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -167,6 +170,33 @@ export function AddObservationDialog({
       setMediaRecorder(recorder);
       setIsRecording(true);
       setRecordingDuration(0);
+      setContent('');
+
+      if (SpeechRecognitionCtor) {
+        const recognition = new SpeechRecognitionCtor();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = navigator.language || 'en-US';
+
+        recognition.onresult = (event: any) => {
+          let finalText = '';
+          for (let i = 0; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+              finalText += event.results[i][0].transcript + ' ';
+            }
+          }
+          if (finalText) setContent(finalText.trim());
+        };
+
+        recognition.onend = () => setIsTranscribing(false);
+        recognition.onerror = () => setIsTranscribing(false);
+
+        recognition.start();
+        recognitionRef.current = recognition;
+        setIsTranscribing(true);
+      } else {
+        recognitionRef.current = null;
+      }
 
       // Start duration counter
       const startTime = Date.now();
@@ -190,6 +220,8 @@ export function AddObservationDialog({
   };
 
   const clearRecording = () => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
     setAudioUrl(null);
     setAudioChunks([]);
     setRecordingDuration(0);
@@ -212,13 +244,13 @@ export function AddObservationDialog({
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!content.trim()) {
       setError('Please enter observation content');
       return;
     }
 
-    const newObservation: Observation = {
+    const newObservation: Omit<Observation, 'teacherId'> = {
       id: `obs_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       studentId,
       type,
@@ -228,7 +260,7 @@ export function AddObservationDialog({
       subject: subject || undefined,
     };
 
-    saveObservation(newObservation);
+    await saveObservation(newObservation);
 
     // Reset form
     setContent('');
@@ -261,9 +293,9 @@ export function AddObservationDialog({
       <DialogContent className="w-full max-w-lg max-h-[95vh] overflow-y-auto sm:max-h-screen">
         <DialogHeader style={{ backgroundColor: `${getTypeColor()}10` }} className="p-4 -m-6 mb-4 rounded-t-lg">
           <div className="flex items-center justify-between mb-2">
-            <CadentLogo height="sm" showProductName />
+            <LaurelLogo height="sm" showProductName />
             <div className="text-right text-xs text-gray-600">
-              <div>Riverside Elementary</div>
+              <div>{schoolName}</div>
             </div>
           </div>
           <DialogTitle className="text-lg">Record Observation</DialogTitle>
@@ -337,7 +369,13 @@ export function AddObservationDialog({
 
               {isTranscribing && (
                 <Alert className="bg-blue-50 border-blue-200">
-                  <AlertDescription>Transcribing audio...</AlertDescription>
+                  <AlertDescription>Listening - live captions will appear below as you speak...</AlertDescription>
+                </Alert>
+              )}
+
+              {!SpeechRecognitionCtor && !isRecording && !audioUrl && (
+                <Alert className="bg-amber-50 border-amber-200">
+                  <AlertDescription>Live captioning isn't available in this browser. You can still record audio and type your notes below.</AlertDescription>
                 </Alert>
               )}
 
@@ -347,7 +385,7 @@ export function AddObservationDialog({
                   id="audio-content"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Audio transcription will appear here. You can edit or add additional notes..."
+                  placeholder={SpeechRecognitionCtor ? "Live transcription will appear here as you speak. You can edit or add additional notes..." : "Describe what you heard in the recording..."}
                   rows={6}
                   className="text-base"
                />
