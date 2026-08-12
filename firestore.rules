@@ -56,6 +56,24 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // Teacher profile: doc ID is the teacher's own uid, so ownership is
+    // just an ID match rather than a stamped teacherId field.
+    match /teacherProfiles/{uid} {
+      allow read, write: if isSignedIn() && uid == request.auth.uid;
+    }
+
+    // Curriculum resources are a shared, cross-teacher library (not scoped
+    // to one teacher) - any signed-in teacher can read/add, but only the
+    // teacher who added a resource can remove it. No update: if a resource
+    // needs correcting, add a replacement instead of editing shared content
+    // in place.
+    match /curriculumResources/{resourceId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.addedByTeacherId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn() && resource.data.addedByTeacherId == request.auth.uid;
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

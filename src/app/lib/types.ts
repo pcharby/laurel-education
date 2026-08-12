@@ -52,3 +52,27 @@ export interface BugReport {
   createdAt: string;
   status: 'new' | 'reviewed' | 'resolved';
 }
+
+export interface TeacherProfile {
+  jurisdiction: string;
+  updatedAt: string;
+}
+
+// A shared, cross-teacher library entry - not scoped to one teacher. Any
+// signed-in teacher can read entries matching their jurisdiction/grade/
+// subject; only the teacher who added one can delete it. See firestore.rules.
+export interface CurriculumResource {
+  id: string;
+  jurisdiction: string;
+  grade: string;
+  subject: string;
+  title: string;
+  type: 'file' | 'link';
+  /** Set when type === 'file'. */
+  fileUrl?: string;
+  storagePath?: string;
+  /** Set when type === 'link'. */
+  externalUrl?: string;
+  addedByTeacherId: string;
+  createdAt: string;
+}

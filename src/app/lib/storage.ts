@@ -1,15 +1,18 @@
-import { Student, Observation, Evaluation, BugReport, SchoolClass } from './types';
-import { auth, db } from '../../firebase';
+import { Student, Observation, Evaluation, BugReport, SchoolClass, TeacherProfile, CurriculumResource } from './types';
+import { auth, db, storage } from '../../firebase';
 import {
   collection,
   addDoc,
   getDocs,
   deleteDoc,
   updateDoc,
+  getDoc,
+  setDoc,
   doc,
   query,
   where,
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 const getTeacherId = (): string => {
   const uid = auth.currentUser?.uid;
@@ -130,6 +133,94 @@ export const submitBugReport = async (
     createdAt: new Date().toISOString(),
     status: 'new',
   });
+};
+
+// Teacher profile - doc ID is the teacher's own uid (1:1), so this reads/
+// writes a single doc directly rather than querying a collection.
+export const getTeacherProfile = async (): Promise<TeacherProfile | null> => {
+  const snap = await getDoc(doc(db, 'teacherProfiles', getTeacherId()));
+  return snap.exists() ? (snap.data() as TeacherProfile) : null;
+};
+
+export const saveTeacherProfile = async (jurisdiction: string): Promise<void> => {
+  await setDoc(doc(db, 'teacherProfiles', getTeacherId()), {
+    jurisdiction,
+    updatedAt: new Date().toISOString(),
+  });
+};
+
+// Curriculum resources: a shared, cross-teacher library, not scoped to the
+// signed-in teacher - see the CurriculumResource type and firestore.rules.
+export const getCurriculumResources = async (
+  jurisdiction: string,
+  grade: string,
+  subject: string
+): Promise<CurriculumResource[]> => {
+  const q = query(
+    collection(db, 'curriculumResources'),
+    where('jurisdiction', '==', jurisdiction),
+    where('grade', '==', grade),
+    where('subject', '==', subject)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(d => ({ ...(d.data() as CurriculumResource), id: d.id }));
+};
+
+export const addCurriculumLink = async (
+  resource: Pick<CurriculumResource, 'jurisdiction' | 'grade' | 'subject' | 'title' | 'externalUrl'>
+): Promise<void> => {
+  await addDoc(collection(db, 'curriculumResources'), stripUndefined({
+    ...resource,
+    type: 'link' as const,
+    addedByTeacherId: getTeacherId(),
+    createdAt: new Date().toISOString(),
+  }));
+};
+
+const MAX_CURRICULUM_FILE_BYTES = 20 * 1024 * 1024;
+const ALLOWED_CURRICULUM_FILE_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+];
+
+export const uploadCurriculumFile = async (
+  file: File,
+  meta: Pick<CurriculumResource, 'jurisdiction' | 'grade' | 'subject' | 'title'>
+): Promise<void> => {
+  if (file.size > MAX_CURRICULUM_FILE_BYTES) {
+    throw new Error('File is too large (20MB max).');
+  }
+  if (!ALLOWED_CURRICULUM_FILE_TYPES.includes(file.type)) {
+    throw new Error('Unsupported file type. Please upload a PDF, Word document, or text file.');
+  }
+
+  // The doc ID is generated up front so the Storage path and the Firestore
+  // record can reference the same ID - storage.rules uses it to look up the
+  // matching Firestore doc's addedByTeacherId when deciding who can delete.
+  const docRef = doc(collection(db, 'curriculumResources'));
+  const storagePath = `curriculum/${docRef.id}/${file.name}`;
+  const storageRef = ref(storage, storagePath);
+
+  await uploadBytes(storageRef, file, { contentType: file.type });
+  const fileUrl = await getDownloadURL(storageRef);
+
+  await setDoc(docRef, stripUndefined({
+    ...meta,
+    type: 'file' as const,
+    fileUrl,
+    storagePath,
+    addedByTeacherId: getTeacherId(),
+    createdAt: new Date().toISOString(),
+  }));
+};
+
+export const deleteCurriculumResource = async (resource: CurriculumResource): Promise<void> => {
+  if (resource.storagePath) {
+    await deleteObject(ref(storage, resource.storagePath));
+  }
+  await deleteDoc(doc(db, 'curriculumResources', resource.id));
 };
 
 // Permanently deletes every student, observation, and evaluation owned by the
