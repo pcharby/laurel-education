@@ -8,10 +8,11 @@ import { ArrowLeft, TrendingUp, TrendingDown, Users, Target, Award, AlertCircle,
 import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
 import { WorksheetGeneratorView } from './WorksheetGeneratorView';
+import { SchoolClass } from '../lib/types';
 
 interface ClassInsightsDashboardProps {
   onBack: () => void;
-  classInfo: { name: string; subject: string };
+  classInfo: SchoolClass;
 }
 
 export function ClassInsightsDashboard({ onBack, classInfo }: ClassInsightsDashboardProps) {
@@ -236,7 +237,7 @@ export function ClassInsightsDashboard({ onBack, classInfo }: ClassInsightsDashb
           </div>
         </div>
         <h1 className="text-xl font-semibold mb-1">Class Insights</h1>
-        <p className="text-white/90">{classInfo.subject} - {classInfo.name}</p>
+        <p className="text-white/90">{classInfo.subject} - Grade {classInfo.grade}{classInfo.name ? ` (${classInfo.name})` : ''}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">

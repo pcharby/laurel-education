@@ -1,10 +1,11 @@
-import { Student, Observation, Evaluation, BugReport } from './types';
+import { Student, Observation, Evaluation, BugReport, SchoolClass } from './types';
 import { auth, db } from '../../firebase';
 import {
   collection,
   addDoc,
   getDocs,
   deleteDoc,
+  updateDoc,
   doc,
   query,
   where,
@@ -15,6 +16,12 @@ const getTeacherId = (): string => {
   if (!uid) throw new Error('Not signed in');
   return uid;
 };
+
+// Firestore rejects explicit `undefined` field values (unlike `null`), so
+// optional fields left blank by a form (e.g. { schedule: undefined }) need
+// to be dropped before addDoc/updateDoc, not just typed as optional.
+const stripUndefined = <T extends object>(obj: T): T =>
+  Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
 
 // Students
 export const getStudents = async (): Promise<Student[]> => {
@@ -37,6 +44,28 @@ export const getStudentById = async (id: string): Promise<Student | undefined> =
 // server-side so they don't become orphaned, unreachable records.
 export const deleteStudent = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'students', id));
+};
+
+// Classes
+export const getClasses = async (): Promise<SchoolClass[]> => {
+  const q = query(collection(db, 'classes'), where('teacherId', '==', getTeacherId()));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(d => ({ ...(d.data() as SchoolClass), id: d.id }));
+};
+
+export const saveClass = async (schoolClass: Omit<SchoolClass, 'id' | 'teacherId'>): Promise<void> => {
+  await addDoc(collection(db, 'classes'), stripUndefined({ ...schoolClass, teacherId: getTeacherId() }));
+};
+
+export const updateClass = async (
+  id: string,
+  updates: Partial<Omit<SchoolClass, 'id' | 'teacherId' | 'createdAt'>>
+): Promise<void> => {
+  await updateDoc(doc(db, 'classes', id), stripUndefined(updates));
+};
+
+export const deleteClass = async (id: string): Promise<void> => {
+  await deleteDoc(doc(db, 'classes', id));
 };
 
 // Observations
@@ -114,7 +143,7 @@ export const deleteAllMyData = async (): Promise<void> => {
   const students = await getStudents();
   await Promise.all(students.map(s => deleteDoc(doc(db, 'students', s.id))));
 
-  for (const collectionName of ['observations', 'evaluations'] as const) {
+  for (const collectionName of ['observations', 'evaluations', 'classes'] as const) {
     const q = query(collection(db, collectionName), where('teacherId', '==', teacherId));
     const snapshot = await getDocs(q);
     await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, collectionName, d.id))));

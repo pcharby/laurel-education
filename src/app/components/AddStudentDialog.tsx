@@ -18,11 +18,12 @@ interface AddStudentDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  defaultGrade?: string;
 }
 
-export function AddStudentDialog({ open, onClose, onSuccess }: AddStudentDialogProps) {
+export function AddStudentDialog({ open, onClose, onSuccess, defaultGrade }: AddStudentDialogProps) {
   const [name, setName] = useState('');
-  const [grade, setGrade] = useState('');
+  const [grade, setGrade] = useState(defaultGrade ?? '');
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {

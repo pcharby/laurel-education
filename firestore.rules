@@ -15,6 +15,11 @@ service cloud.firestore {
       return isSignedIn() && request.resource.data.teacherId == request.auth.uid;
     }
 
+    match /classes/{classId} {
+      allow read, update, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+    }
+
     match /students/{studentId} {
       allow read, update, delete: if ownsExisting();
       allow create: if ownsIncoming();

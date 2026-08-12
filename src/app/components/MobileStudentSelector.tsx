@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Student } from '../lib/types';
+import { Student, SchoolClass } from '../lib/types';
 import { getStudents } from '../lib/storage';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
@@ -13,7 +13,7 @@ interface MobileStudentSelectorProps {
   onSelectStudent: (student: Student) => void;
   onBack: () => void;
   observationType: 'text' | 'audio' | 'image';
-  classInfo: { id: string; name: string; subject: string };
+  classInfo: SchoolClass;
 }
 
 export function MobileStudentSelector({
@@ -23,6 +23,7 @@ export function MobileStudentSelector({
   classInfo
 }: MobileStudentSelectorProps) {
   const [students, setStudents] = useState<Student[]>([]);
+  const [hasAnyStudents, setHasAnyStudents] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
 
@@ -42,16 +43,18 @@ export function MobileStudentSelector({
           { id: '9', teacherId: demoTeacherId, name: 'Isabella Garcia', grade: '5', createdAt: new Date().toISOString() },
           { id: '10', teacherId: demoTeacherId, name: 'James Wilson', grade: '5', createdAt: new Date().toISOString() },
         ];
-        setStudents(mockStudents);
+        setHasAnyStudents(mockStudents.length > 0);
+        setStudents(mockStudents.filter(s => s.grade === classInfo.grade));
       } else {
-        setStudents(stored);
+        setHasAnyStudents(stored.length > 0);
+        setStudents(stored.filter(s => s.grade === classInfo.grade));
       }
     });
   };
 
   useEffect(() => {
     loadStudents();
-  }, []);
+  }, [classInfo.grade]);
 
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -102,7 +105,9 @@ export function MobileStudentSelector({
             <UserCircle className="w-16 h-16 text-gray-300 mb-4" />
             <p className="text-gray-500 mb-4">
               {students.length === 0
-                ? 'No students yet. Add your first student to get started.'
+                ? hasAnyStudents
+                  ? `No students in Grade ${classInfo.grade} yet. Add one to get started with this class.`
+                  : 'No students yet. Add your first student to get started.'
                 : 'No students match your search.'}
             </p>
             {students.length === 0 && (
@@ -145,6 +150,7 @@ export function MobileStudentSelector({
         open={showAddDialog}
         onClose={() => setShowAddDialog(false)}
         onSuccess={loadStudents}
+        defaultGrade={classInfo.grade}
       />
     </div>
   );

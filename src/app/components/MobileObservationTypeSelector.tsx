@@ -1,12 +1,13 @@
 import { Button } from './ui/button';
 import { FileText, Mic, Camera, ArrowLeft, BarChart3 } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
+import { SchoolClass } from '../lib/types';
 
 interface MobileObservationTypeSelectorProps {
   onSelectType: (type: 'text' | 'audio' | 'image') => void;
   onBack: () => void;
   onClassInsights: () => void;
-  classInfo: { name: string; subject: string };
+  classInfo: SchoolClass;
 }
 
 export function MobileObservationTypeSelector({
@@ -34,7 +35,7 @@ export function MobileObservationTypeSelector({
 
       <div className="text-center mb-8">
         <h2 className="text-2xl font-semibold mb-1 text-gray-800">{classInfo.subject}</h2>
-        <p className="text-gray-600">{classInfo.name}</p>
+        <p className="text-gray-600">Grade {classInfo.grade}{classInfo.name ? ` — ${classInfo.name}` : ''}</p>
       </div>
 
       <div className="flex-1 flex items-center justify-center pb-8">

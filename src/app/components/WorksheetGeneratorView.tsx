@@ -41,7 +41,7 @@ interface LearningObjective {
 
 interface WorksheetGeneratorViewProps {
   onBack: () => void;
-  classInfo: { name: string; subject: string };
+  classInfo: { name?: string; subject: string };
   learningObjectives: LearningObjective[];
   grade: string;
 }
@@ -95,7 +95,7 @@ function WorksheetPreview({
   classInfo,
 }: {
   worksheet: GeneratedWorksheet;
-  classInfo: { name: string; subject: string };
+  classInfo: { name?: string; subject: string };
 }) {
   const today = new Date().toLocaleDateString('en-CA', {
     year: 'numeric',
@@ -110,7 +110,7 @@ function WorksheetPreview({
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">{worksheet.title}</h1>
           <p className="text-sm text-gray-600">
-            {worksheet.subject} &nbsp;·&nbsp; Grade {worksheet.grade} &nbsp;·&nbsp; {classInfo.name}
+            {worksheet.subject} &nbsp;·&nbsp; Grade {worksheet.grade}{classInfo.name ? <> &nbsp;·&nbsp; {classInfo.name}</> : null}
           </p>
         </div>
         <div className="text-right text-xs text-gray-500 shrink-0 ml-6 mt-1">
@@ -181,7 +181,7 @@ function WorksheetPreview({
 }
 
 // ─── Print HTML builder (self-contained, no Tailwind dependency) ──────────────
-function buildPrintHTML(worksheet: GeneratedWorksheet, classInfo: { name: string; subject: string }): string {
+function buildPrintHTML(worksheet: GeneratedWorksheet, classInfo: { name?: string; subject: string }): string {
   const today = new Date().toLocaleDateString('en-CA', {
     year: 'numeric',
     month: 'long',
@@ -473,7 +473,7 @@ function buildPrintHTML(worksheet: GeneratedWorksheet, classInfo: { name: string
   <div class="doc-header">
     <div>
       <div class="doc-title">${worksheet.title}</div>
-      <div class="doc-meta">${worksheet.subject} &nbsp;·&nbsp; Grade ${worksheet.grade} &nbsp;·&nbsp; ${classInfo.name}</div>
+      <div class="doc-meta">${worksheet.subject} &nbsp;·&nbsp; Grade ${worksheet.grade}${classInfo.name ? ` · ${classInfo.name}` : ''}</div>
     </div>
     <div class="doc-school">
       <div>Est. time: ${worksheet.estimatedTime}</div>

@@ -9,6 +9,17 @@ export interface Student {
   createdAt: string;
 }
 
+export interface SchoolClass {
+  id: string;
+  teacherId: string;
+  subject: string;
+  grade: string;
+  /** Optional section/group label, e.g. "A" or "Advanced Group" - distinct from grade. */
+  name?: string;
+  schedule?: string;
+  createdAt: string;
+}
+
 export interface Observation {
   id: string;
   teacherId: string;

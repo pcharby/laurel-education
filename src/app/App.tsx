@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signInAnonymously, signOut, type User } from 'firebase/auth';
 import { auth } from '../firebase';
-import { Student } from './lib/types';
+import { Student, SchoolClass } from './lib/types';
 import { LoginScreen } from './components/LoginScreen';
 import { ClassSelector } from './components/ClassSelector';
 import { MobileObservationTypeSelector } from './components/MobileObservationTypeSelector';
@@ -44,7 +44,7 @@ type View =
 export default function App() {
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
   const [view, setView] = useState<View>('login');
-  const [selectedClass, setSelectedClass] = useState<{ id: string; name: string; subject: string } | null>(null);
+  const [selectedClass, setSelectedClass] = useState<SchoolClass | null>(null);
   const [selectedType, setSelectedType] = useState<'text' | 'audio' | 'image' | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
@@ -69,7 +69,7 @@ export default function App() {
     }
   };
 
-  const handleSelectClass = (classInfo: { id: string; name: string; subject: string }) => {
+  const handleSelectClass = (classInfo: SchoolClass) => {
     setSelectedClass(classInfo);
     setView('type-selection');
   };
@@ -227,6 +227,7 @@ export default function App() {
           onViewStudentSummary={handleViewStudentSummary}
           onLogout={handleLogout}
           onSettings={handleSettings}
+          onManageClasses={handleClassesAndSubjects}
         />
       )}
 
