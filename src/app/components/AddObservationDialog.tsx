@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Observation } from '../lib/types';
-import { saveObservation } from '../lib/storage';
+import { saveObservation, getRubrics } from '../lib/storage';
+import { auth } from '../../firebase';
 import { LaurelLogo } from './LaurelLogo';
 import {
   Dialog,
@@ -19,7 +20,7 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
 import { Checkbox } from './ui/checkbox';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { FileText, Mic, Image as ImageIcon, X } from 'lucide-react';
+import { FileText, Mic, Image as ImageIcon, X, Loader2 } from 'lucide-react';
 import { useSchoolName } from '../lib/useSchoolName';
 
 interface AddObservationDialogProps {
@@ -84,6 +85,7 @@ export function AddObservationDialog({
   subject = '',
 }: AddObservationDialogProps) {
   const { schoolName } = useSchoolName();
+  const isDemo = auth.currentUser?.isAnonymous ?? false;
   const [type, setType] = useState<'text' | 'audio' | 'image'>(initialType);
   const [content, setContent] = useState('');
   const [selectedRubrics, setSelectedRubrics] = useState<string[]>([]);
@@ -93,7 +95,24 @@ export function AddObservationDialog({
   const [selectedStrand, setSelectedStrand] = useState<string>('');
   const [selectedObjective, setSelectedObjective] = useState<string>('');
 
-  const rubrics = getRubricsForSubject(subject);
+  // Demo accounts see the same fixed sample rubric set used elsewhere
+  // (CustomRubricsConfig's DEMO_RUBRICS) - real accounts get whatever the
+  // teacher has actually configured in Settings > Custom Rubrics for this
+  // subject, not a generic hardcoded list.
+  const [rubrics, setRubrics] = useState<string[]>(isDemo ? getRubricsForSubject(subject) : []);
+  const [rubricsLoading, setRubricsLoading] = useState(!isDemo);
+
+  useEffect(() => {
+    if (isDemo || !subject) {
+      setRubricsLoading(false);
+      return;
+    }
+    setRubricsLoading(true);
+    getRubrics(subject).then(result => {
+      setRubrics(result.map(r => r.label));
+      setRubricsLoading(false);
+    });
+  }, [subject, isDemo]);
 
   // Grade 5 Curriculum Strands
   const strands = {
@@ -122,7 +141,6 @@ export function AddObservationDialog({
   const currentObjectives = selectedStrand
     ? currentStrands.find(s => s.name === selectedStrand)?.objectives || []
     : [];
-  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -260,14 +278,26 @@ export function AddObservationDialog({
       subject: subject || undefined,
     };
 
-    await saveObservation(newObservation);
+    let mediaFile: File | undefined;
+    if (type === 'audio' && audioChunks.length > 0) {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      mediaFile = new File([audioBlob], `recording-${Date.now()}.webm`, { type: 'audio/webm' });
+    } else if (type === 'image' && imageFile) {
+      mediaFile = imageFile;
+    }
+
+    try {
+      await saveObservation(newObservation, mediaFile);
+    } catch {
+      setError('Could not save this observation. Please try again.');
+      return;
+    }
 
     // Reset form
     setContent('');
     setSelectedRubrics([]);
     setTags([]);
     setTagInput('');
-    setAudioFile(null);
     setImageFile(null);
     setAudioUrl(null);
     setAudioChunks([]);
@@ -526,22 +556,32 @@ export function AddObservationDialog({
           <div className="space-y-2">
             <Label className="text-base font-semibold">Curriculum Rubrics</Label>
             <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border-2 rounded-lg p-3 bg-gray-50">
-              {rubrics.map((rubric) => (
-                <div key={rubric} className="flex items-center gap-3 py-1">
-                  <Checkbox
-                    id={rubric}
-                    checked={selectedRubrics.includes(rubric)}
-                    onCheckedChange={() => toggleRubric(rubric)}
-                    className="h-5 w-5"
-                 />
-                  <label
-                    htmlFor={rubric}
-                    className="text-sm cursor-pointer select-none flex-1"
-                  >
-                    {rubric}
-                  </label>
+              {rubricsLoading ? (
+                <div className="w-full flex justify-center py-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#6B5FE4]" />
                 </div>
-              ))}
+              ) : rubrics.length === 0 ? (
+                <p className="text-sm text-gray-500 py-1">
+                  No rubrics set up for {subject || 'this subject'} yet - add some in Settings &gt; Custom Rubrics.
+                </p>
+              ) : (
+                rubrics.map((rubric) => (
+                  <div key={rubric} className="flex items-center gap-3 py-1">
+                    <Checkbox
+                      id={rubric}
+                      checked={selectedRubrics.includes(rubric)}
+                      onCheckedChange={() => toggleRubric(rubric)}
+                      className="h-5 w-5"
+                   />
+                    <label
+                      htmlFor={rubric}
+                      className="text-sm cursor-pointer select-none flex-1"
+                    >
+                      {rubric}
+                    </label>
+                  </div>
+                ))
+              )}
             </div>
             {selectedRubrics.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">

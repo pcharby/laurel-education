@@ -103,8 +103,48 @@ export const getObservations = async (): Promise<Observation[]> => {
   return snapshot.docs.map(d => ({ ...(d.data() as Observation), id: d.id }));
 };
 
-export const saveObservation = async (observation: Omit<Observation, 'teacherId'>): Promise<void> => {
-  await addDoc(collection(db, 'observations'), { ...observation, teacherId: getTeacherId() });
+const MAX_OBSERVATION_MEDIA_BYTES = 20 * 1024 * 1024;
+const ALLOWED_OBSERVATION_MEDIA_TYPES: Record<string, string[]> = {
+  audio: ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/wav', 'audio/mpeg'],
+  image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+};
+
+// A media file is only present for audio/image observations. The doc ID is
+// generated up front (mirrors uploadCurriculumFile) so the Storage path and
+// Firestore record share it, and customMetadata.uploadedBy tags the object
+// for storage.rules to check on read/delete - same pattern as curriculum
+// files, except read is restricted to the owning teacher here since
+// observations are private per-teacher, not a shared library.
+export const saveObservation = async (
+  observation: Omit<Observation, 'teacherId'>,
+  mediaFile?: File
+): Promise<void> => {
+  const teacherId = getTeacherId();
+
+  if (!mediaFile) {
+    await addDoc(collection(db, 'observations'), stripUndefined({ ...observation, teacherId }));
+    return;
+  }
+
+  const allowedTypes = ALLOWED_OBSERVATION_MEDIA_TYPES[observation.type] ?? [];
+  if (mediaFile.size > MAX_OBSERVATION_MEDIA_BYTES) {
+    throw new Error('File is too large (20MB max).');
+  }
+  if (!allowedTypes.includes(mediaFile.type)) {
+    throw new Error('Unsupported file type for this observation.');
+  }
+
+  const docRef = doc(collection(db, 'observations'));
+  const storagePath = `observations/${docRef.id}/${mediaFile.name}`;
+  const storageRef = ref(storage, storagePath);
+
+  await uploadBytes(storageRef, mediaFile, {
+    contentType: mediaFile.type,
+    customMetadata: { uploadedBy: teacherId },
+  });
+  const mediaUrl = await getDownloadURL(storageRef);
+
+  await setDoc(docRef, stripUndefined({ ...observation, mediaUrl, storagePath, teacherId }));
 };
 
 export const getObservationsByStudent = async (studentId: string): Promise<Observation[]> => {
@@ -117,8 +157,11 @@ export const getObservationsByStudent = async (studentId: string): Promise<Obser
   return snapshot.docs.map(d => ({ ...(d.data() as Observation), id: d.id }));
 };
 
-export const deleteObservation = async (id: string): Promise<void> => {
-  await deleteDoc(doc(db, 'observations', id));
+export const deleteObservation = async (observation: Pick<Observation, 'id' | 'storagePath'>): Promise<void> => {
+  if (observation.storagePath) {
+    await deleteObject(ref(storage, observation.storagePath));
+  }
+  await deleteDoc(doc(db, 'observations', observation.id));
 };
 
 // Evaluations
@@ -271,6 +314,14 @@ export const deleteAllMyData = async (): Promise<void> => {
   for (const collectionName of ['observations', 'evaluations', 'classes', 'rubrics'] as const) {
     const q = query(collection(db, collectionName), where('teacherId', '==', teacherId));
     const snapshot = await getDocs(q);
-    await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, collectionName, d.id))));
+    await Promise.all(snapshot.docs.map(async (d) => {
+      const storagePath = collectionName === 'observations' ? (d.data() as Observation).storagePath : undefined;
+      if (storagePath) {
+        // Best-effort: a missing/already-deleted Storage object shouldn't
+        // block the account-deletion sweep from finishing.
+        await deleteObject(ref(storage, storagePath)).catch(() => {});
+      }
+      await deleteDoc(doc(db, collectionName, d.id));
+    }));
   }
 };

@@ -32,6 +32,25 @@ service firebase.storage {
         resource.metadata.uploadedBy == request.auth.uid;
     }
 
+    // Observation audio/photo attachments: private per-teacher data (unlike
+    // curriculum's shared library above), so read is restricted to the
+    // uploader via customMetadata.uploadedBy too, not just delete. Same
+    // Storage-native metadata check already proven to work live for
+    // curriculum deletes.
+    match /observations/{observationId}/{fileName} {
+      allow read: if request.auth != null &&
+        resource.metadata.uploadedBy == request.auth.uid;
+
+      allow create: if request.auth != null
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*|image/.*');
+
+      allow update: if false;
+
+      allow delete: if request.auth != null &&
+        resource.metadata.uploadedBy == request.auth.uid;
+    }
+
     // Deny everything else by default.
     match /{allPaths=**} {
       allow read, write: if false;

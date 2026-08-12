@@ -8,7 +8,7 @@ import { ArrowLeft, Copy, CheckCircle, Loader2, TrendingUp, BarChart, RefreshCw 
 import { toast } from 'sonner';
 import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
-import { getObservationsByStudent } from '../lib/storage';
+import { getObservationsByStudent, saveEvaluation } from '../lib/storage';
 import { generateMockEvaluation } from '../lib/mock-ai';
 import { generateEvaluation as generateAIEvaluation } from '../lib/ai';
 import { auth } from '../../firebase';
@@ -52,11 +52,27 @@ export function ReportGenerationView({ student, onBack }: ReportGenerationViewPr
         bySubject.set(key, [...(bySubject.get(key) ?? []), obs]);
       }
 
-      const generate = auth.currentUser?.isAnonymous ? generateMockEvaluation : generateAIEvaluation;
+      const isDemo = auth.currentUser?.isAnonymous ?? false;
+      const generate = isDemo ? generateMockEvaluation : generateAIEvaluation;
 
       const results = await Promise.all(
         Array.from(bySubject.entries()).map(async ([subject, subjectObservations]) => {
           const result = await generate(subjectObservations, student.name);
+
+          // Demo accounts have no real data to attach this to; real accounts
+          // get a persisted record so it shows up in the student's data
+          // export (PIPEDA access-request history), not just on-screen.
+          if (!isDemo) {
+            await saveEvaluation({
+              id: `eval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              studentId: student.id,
+              generatedText: result.summary,
+              strengths: result.strengths,
+              areasForImprovement: result.areasForImprovement,
+              date: new Date().toISOString(),
+            });
+          }
+
           return {
             subject,
             observationCount: subjectObservations.length,

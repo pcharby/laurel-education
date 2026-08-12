@@ -29,6 +29,9 @@ export interface Observation {
   timestamp: string;
   tags: string[];
   subject?: string;
+  /** Set when type is 'audio' or 'image' and a recording/photo was captured. */
+  mediaUrl?: string;
+  storagePath?: string;
 }
 
 export interface Evaluation {

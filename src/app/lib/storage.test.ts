@@ -58,7 +58,7 @@ describe('storage.ts teacher scoping', () => {
       // relies on firestore.rules. If this test starts failing because someone
       // added a client-side check, update firestore.rules to match rather than
       // assuming the old rules are still correct.
-      await expect(storage.deleteObservation('obs-1')).resolves.toBeUndefined()
+      await expect(storage.deleteObservation({ id: 'obs-1' })).resolves.toBeUndefined()
     })
   })
 

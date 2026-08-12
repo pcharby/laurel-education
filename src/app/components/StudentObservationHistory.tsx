@@ -30,9 +30,9 @@ export function StudentObservationHistory({ student, onBack }: StudentObservatio
     loadObservations();
   }, [student.id]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (observation: Observation) => {
     if (confirm('Are you sure you want to delete this observation?')) {
-      await deleteObservation(id);
+      await deleteObservation(observation);
       loadObservations();
     }
   };
@@ -169,7 +169,7 @@ export function StudentObservationHistory({ student, onBack }: StudentObservatio
                   <Button
                     
                     size="sm"
-                    onClick={() => handleDelete(obs.id)}
+                    onClick={() => handleDelete(obs)}
                     className="text-red-500 hover:text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -177,6 +177,12 @@ export function StudentObservationHistory({ student, onBack }: StudentObservatio
                 </div>
               </CardHeader>
               <CardContent>
+                {obs.type === 'audio' && obs.mediaUrl && (
+                  <audio controls src={obs.mediaUrl} className="w-full mb-3" />
+                )}
+                {obs.type === 'image' && obs.mediaUrl && (
+                  <img src={obs.mediaUrl} alt="Observation attachment" className="w-full rounded-lg mb-3 max-h-64 object-cover" />
+                )}
                 <p className="text-sm whitespace-pre-wrap mb-3">{obs.content}</p>
                 {obs.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 items-center">
