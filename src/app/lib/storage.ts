@@ -197,13 +197,19 @@ export const uploadCurriculumFile = async (
   }
 
   // The doc ID is generated up front so the Storage path and the Firestore
-  // record can reference the same ID - storage.rules uses it to look up the
-  // matching Firestore doc's addedByTeacherId when deciding who can delete.
+  // record can reference the same ID. customMetadata.uploadedBy is what
+  // storage.rules actually checks for delete permission (Storage-native,
+  // not a firestore.get() cross-service lookup - that turned out not to
+  // work as documented when tested live).
+  const teacherId = getTeacherId();
   const docRef = doc(collection(db, 'curriculumResources'));
   const storagePath = `curriculum/${docRef.id}/${file.name}`;
   const storageRef = ref(storage, storagePath);
 
-  await uploadBytes(storageRef, file, { contentType: file.type });
+  await uploadBytes(storageRef, file, {
+    contentType: file.type,
+    customMetadata: { uploadedBy: teacherId },
+  });
   const fileUrl = await getDownloadURL(storageRef);
 
   await setDoc(docRef, stripUndefined({
@@ -211,7 +217,7 @@ export const uploadCurriculumFile = async (
     type: 'file' as const,
     fileUrl,
     storagePath,
-    addedByTeacherId: getTeacherId(),
+    addedByTeacherId: teacherId,
     createdAt: new Date().toISOString(),
   }));
 };
