@@ -12,6 +12,7 @@ const { mockAuth } = vi.hoisted(() => ({
 vi.mock('../../firebase', () => ({
   auth: mockAuth,
   db: {},
+  functions: {},
 }))
 
 vi.mock('firebase/firestore', () => ({
@@ -22,6 +23,10 @@ vi.mock('firebase/firestore', () => ({
   addDoc: vi.fn(async () => ({ id: 'new-doc-id' })),
   deleteDoc: vi.fn(async () => undefined),
   doc: vi.fn((_db: unknown, col: string, id: string) => ({ __type: 'doc', col, id })),
+}))
+
+vi.mock('firebase/functions', () => ({
+  httpsCallable: vi.fn(() => vi.fn(async () => ({ data: undefined }))),
 }))
 
 import { where, addDoc } from 'firebase/firestore'

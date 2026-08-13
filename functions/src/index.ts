@@ -104,6 +104,22 @@ Write a professional, encouraging report card evaluation grounded strictly in th
   }
 );
 
+// Curriculum file uploads go straight from the client to Storage (no
+// Cloud Function in that path, unlike generateEvaluation) so there's
+// nowhere server-side to gate the actual upload. This callable is just the
+// rate-limit check itself - the client calls it before uploading, and a
+// signed-in user hammering "add resource" can't bypass it since rateLimits
+// is only ever written by Cloud Functions (see firestore.rules).
+export const checkCurriculumUploadRateLimit = onCall(
+  { region: REGION },
+  async (request): Promise<void> => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+    await enforceRateLimit(request.auth.uid, 'uploadCurriculumFile');
+  }
+);
+
 const substitutePlaceholder = (
   result: GenerateEvaluationResponse,
   studentName: string

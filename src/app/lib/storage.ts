@@ -1,5 +1,5 @@
 import { Student, Observation, Evaluation, BugReport, SchoolClass, TeacherProfile, CurriculumResource, Rubric } from './types';
-import { auth, db, storage } from '../../firebase';
+import { auth, db, storage, functions } from '../../firebase';
 import {
   collection,
   addDoc,
@@ -13,6 +13,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { httpsCallable } from 'firebase/functions';
 
 const getTeacherId = (): string => {
   const uid = auth.currentUser?.uid;
@@ -256,6 +257,13 @@ const ALLOWED_CURRICULUM_FILE_TYPES = [
   'text/plain',
 ];
 
+// Curriculum uploads go straight from the client to Storage, so there's no
+// Cloud Function in the path to rate-limit the way generateEvaluation is -
+// this callable exists purely as a server-side gate a client can't bypass
+// (rateLimits is Cloud-Functions-only per firestore.rules), checked before
+// every upload the same way a real teacher would only trigger occasionally.
+const callCheckCurriculumUploadRateLimit = httpsCallable(functions, 'checkCurriculumUploadRateLimit');
+
 export const uploadCurriculumFile = async (
   file: File,
   meta: Pick<CurriculumResource, 'jurisdiction' | 'grade' | 'subject' | 'title'>
@@ -266,6 +274,8 @@ export const uploadCurriculumFile = async (
   if (!ALLOWED_CURRICULUM_FILE_TYPES.includes(file.type)) {
     throw new Error('Unsupported file type. Please upload a PDF, Word document, or text file.');
   }
+
+  await callCheckCurriculumUploadRateLimit();
 
   // The doc ID is generated up front so the Storage path and the Firestore
   // record can reference the same ID. customMetadata.uploadedBy is what

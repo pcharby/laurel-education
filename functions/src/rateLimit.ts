@@ -29,10 +29,7 @@ export async function enforceRateLimit(uid: string, action: string): Promise<voi
     }
 
     if (data.count >= MAX_CALLS_PER_WINDOW) {
-      throw new HttpsError(
-        'resource-exhausted',
-        'Too many requests. Please wait a while before generating more evaluations.'
-      );
+      throw new HttpsError('resource-exhausted', 'Too many requests. Please wait a while before trying again.');
     }
 
     tx.update(ref, { count: data.count + 1 });
