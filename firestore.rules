@@ -15,25 +15,43 @@ service cloud.firestore {
       return isSignedIn() && request.resource.data.teacherId == request.auth.uid;
     }
 
+    // School-year lockdown: 2 days after a teacher's chosen schoolYearEndDate,
+    // creates/updates on their classroom data are blocked - purely derived
+    // from request.time, so it engages/releases instantly with no cron in
+    // the loop. `is timestamp` doubles as the "never set a date" no-op guard:
+    // an absent field short-circuits to false before the + arithmetic runs.
+    // Deletes are never gated (see deleteAllMyData/right-to-erasure), and
+    // evaluations are never gated (report generation should keep working
+    // past lockout - see functions/src/schoolYearLockdown.ts for the
+    // archival side of this feature).
+    function isTeacherLocked() {
+      let profile = get(/databases/$(database)/documents/teacherProfiles/$(request.auth.uid)).data;
+      return profile.schoolYearEndDate is timestamp
+        && request.time > profile.schoolYearEndDate + duration.value(2, 'd');
+    }
+
     match /classes/{classId} {
-      allow read, update, delete: if ownsExisting();
-      allow create: if ownsIncoming();
+      allow read, delete: if ownsExisting();
+      allow update: if ownsExisting() && !isTeacherLocked();
+      allow create: if ownsIncoming() && !isTeacherLocked();
     }
 
     match /rubrics/{rubricId} {
       allow read, delete: if ownsExisting();
-      allow create: if ownsIncoming();
+      allow create: if ownsIncoming() && !isTeacherLocked();
       allow update: if false;
     }
 
     match /students/{studentId} {
-      allow read, update, delete: if ownsExisting();
-      allow create: if ownsIncoming();
+      allow read, delete: if ownsExisting();
+      allow update: if ownsExisting() && !isTeacherLocked();
+      allow create: if ownsIncoming() && !isTeacherLocked();
     }
 
     match /observations/{observationId} {
-      allow read, update, delete: if ownsExisting();
-      allow create: if ownsIncoming();
+      allow read, delete: if ownsExisting();
+      allow update: if ownsExisting() && !isTeacherLocked();
+      allow create: if ownsIncoming() && !isTeacherLocked();
     }
 
     match /evaluations/{evaluationId} {

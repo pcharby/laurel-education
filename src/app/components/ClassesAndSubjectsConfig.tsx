@@ -6,10 +6,12 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
-import { ArrowLeft, Plus, X, BookOpen, Pencil, Check, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from './ui/alert';
+import { ArrowLeft, Plus, X, BookOpen, Pencil, Check, Loader2, Lock, Archive, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { LaurelLogo } from './LaurelLogo';
 import { useSchoolName } from '../lib/useSchoolName';
+import { useSchoolYearLock } from '../lib/useSchoolYearLock';
 
 interface ClassesAndSubjectsConfigProps {
   onBack: () => void;
@@ -19,8 +21,11 @@ const emptyForm = { subject: '', grade: '', name: '', schedule: '' };
 
 export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigProps) {
   const { schoolName, badgeLetter } = useSchoolName();
+  const lockInfo = useSchoolYearLock();
+  const locked = lockInfo.status === 'locked';
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Add/Edit class dialog - null means closed, {} means "adding new"
   const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
@@ -34,6 +39,9 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
       setLoading(false);
     });
   };
+
+  const activeClasses = classes.filter(c => !c.archived);
+  const archivedClasses = classes.filter(c => c.archived);
 
   useEffect(() => {
     loadClasses();
@@ -128,11 +136,26 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {locked && (
+          <Alert className="bg-amber-50 border-amber-200">
+            <Lock className="w-4 h-4" />
+            <AlertDescription>
+              Your school year is locked — classes can still be removed, but not added or edited until you set a new end date in Settings &gt; School Profile.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center justify-between">
               <span>Your Classes</span>
-              <Button size="sm" className="gap-2 bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white" onClick={openAdd}>
+              <Button
+                size="sm"
+                className="gap-2 bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white"
+                onClick={openAdd}
+                disabled={locked}
+                title={locked ? 'Your school year is locked - update the end date in Settings to add classes.' : undefined}
+              >
                 <Plus className="w-4 h-4" />
                 Add Class
               </Button>
@@ -143,12 +166,12 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
               <div className="flex justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-[#6B5FE4]" />
               </div>
-            ) : classes.length === 0 ? (
+            ) : activeClasses.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">
                 No classes yet. Add one to have it appear in your class selection menu.
               </p>
             ) : (
-              classes.map((classInfo) => (
+              activeClasses.map((classInfo) => (
                 <Card key={classInfo.id} className="border-l-4 border-l-[#6B5FE4]">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
@@ -165,7 +188,13 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
                         )}
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEdit(classInfo)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEdit(classInfo)}
+                          disabled={locked}
+                          title={locked ? 'Your school year is locked - update the end date in Settings to edit classes.' : undefined}
+                        >
                           <Pencil className="w-3.5 h-3.5 mr-1" />
                           Edit
                         </Button>
@@ -185,6 +214,40 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
             )}
           </CardContent>
         </Card>
+
+        {archivedClasses.length > 0 && (
+          <Card>
+            <CardHeader>
+              <button
+                className="w-full flex items-center justify-between text-left"
+                onClick={() => setShowArchived(v => !v)}
+              >
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Archive className="w-4 h-4 text-muted-foreground" />
+                  Archived Classes ({archivedClasses.length})
+                </CardTitle>
+                {showArchived ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+            </CardHeader>
+            {showArchived && (
+              <CardContent className="space-y-3">
+                {archivedClasses.map((classInfo) => (
+                  <Card key={classInfo.id} className="border-l-4 border-l-muted bg-muted/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <BookOpen className="w-4 h-4 text-muted-foreground" />
+                        <p className="font-semibold text-muted-foreground">{classInfo.subject}</p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Grade {classInfo.grade}{classInfo.name ? ` — ${classInfo.name}` : ''}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </CardContent>
+            )}
+          </Card>
+        )}
 
         <Card className="bg-accent/40 border-accent">
           <CardContent className="p-4">
@@ -208,7 +271,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
             <Button
               className="bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white gap-2"
               onClick={handleAdd}
-              disabled={saving || !form.subject.trim() || !form.grade.trim()}
+              disabled={saving || locked || !form.subject.trim() || !form.grade.trim()}
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               Add Class
@@ -229,7 +292,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
             <Button
               className="bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white gap-2"
               onClick={handleEdit}
-              disabled={saving || !form.subject.trim() || !form.grade.trim()}
+              disabled={saving || locked || !form.subject.trim() || !form.grade.trim()}
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               Save Changes

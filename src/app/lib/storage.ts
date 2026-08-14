@@ -11,9 +11,11 @@ import {
   doc,
   query,
   where,
+  deleteField,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
+import { getSchoolYearLockStatus } from './schoolYearLock';
 
 const getTeacherId = (): string => {
   const uid = auth.currentUser?.uid;
@@ -27,11 +29,26 @@ const getTeacherId = (): string => {
 const stripUndefined = <T extends object>(obj: T): T =>
   Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
 
-// Students
-export const getStudents = async (): Promise<Student[]> => {
+// Students - teachers don't carry a roster between school years (see
+// schoolYearLockdownSweep), so getStudents() only returns the current,
+// non-archived roster by default. A few callers deliberately need the full
+// set regardless of archive status (looking up one specific student by ID,
+// or wiping an account entirely), so they go through fetchAllStudents
+// directly instead of the filtered getStudents().
+const fetchAllStudents = async (): Promise<Student[]> => {
   const q = query(collection(db, 'students'), where('teacherId', '==', getTeacherId()));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(d => ({ ...(d.data() as Student), id: d.id }));
+};
+
+export const getStudents = async (): Promise<Student[]> => {
+  const students = await fetchAllStudents();
+  return students.filter(s => !s.archived);
+};
+
+export const getArchivedStudents = async (): Promise<Student[]> => {
+  const students = await fetchAllStudents();
+  return students.filter(s => s.archived === true);
 };
 
 export const saveStudent = async (student: Omit<Student, 'teacherId'>): Promise<void> => {
@@ -39,7 +56,7 @@ export const saveStudent = async (student: Omit<Student, 'teacherId'>): Promise<
 };
 
 export const getStudentById = async (id: string): Promise<Student | undefined> => {
-  const students = await getStudents();
+  const students = await fetchAllStudents();
   return students.find(s => s.id === id);
 };
 
@@ -135,6 +152,20 @@ export const saveObservation = async (
     throw new Error('Unsupported file type for this observation.');
   }
 
+  // storage.rules can't mirror firestore.rules' isTeacherLocked() check (a
+  // documented, tested limitation of cross-service get() lookups from
+  // Storage rules in this project - see the curriculum upload rules
+  // comment), so a locked teacher could otherwise still upload straight to
+  // Storage even though the matching Firestore write below will be
+  // rejected. Checked here instead: the resulting orphaned Storage object
+  // if this check were skipped would be inert (never rendered, since
+  // nothing points to it without the Firestore doc), but there's no reason
+  // to let the upload happen at all if the write is guaranteed to fail.
+  const lockStatus = getSchoolYearLockStatus(await getTeacherProfile());
+  if (lockStatus.status === 'locked') {
+    throw new Error('Your school year is locked. Update the end date in Settings to add new observations.');
+  }
+
   const docRef = doc(collection(db, 'observations'));
   const storagePath = `observations/${docRef.id}/${mediaFile.name}`;
   const storageRef = ref(storage, storagePath);
@@ -212,13 +243,26 @@ export const getTeacherProfile = async (): Promise<TeacherProfile | null> => {
 };
 
 export const saveTeacherProfile = async (
-  updates: Partial<Pick<TeacherProfile, 'jurisdiction' | 'schoolName'>>
+  updates: Partial<Pick<TeacherProfile, 'jurisdiction' | 'schoolName' | 'schoolYearEndDate'>>
 ): Promise<void> => {
   await setDoc(
     doc(db, 'teacherProfiles', getTeacherId()),
     stripUndefined({ ...updates, updatedAt: new Date().toISOString() }),
     { merge: true }
   );
+};
+
+// setDoc with a plain merge can't remove a field, only overwrite or leave it
+// untouched - deleteField() is the sentinel Firestore requires to actually
+// clear schoolYearEndDate rather than storing an explicit null (the field is
+// typed optional/absent, and firestore.rules' isTeacherLocked() already
+// treats "absent" as its permanent no-op state - no need to distinguish a
+// stored null from absent anywhere else in the app).
+export const clearSchoolYearEndDate = async (): Promise<void> => {
+  await updateDoc(doc(db, 'teacherProfiles', getTeacherId()), {
+    schoolYearEndDate: deleteField(),
+    updatedAt: new Date().toISOString(),
+  });
 };
 
 // Curriculum resources: a shared, cross-teacher library, not scoped to the
@@ -318,7 +362,7 @@ export const deleteCurriculumResource = async (resource: CurriculumResource): Pr
 export const deleteAllMyData = async (): Promise<void> => {
   const teacherId = getTeacherId();
 
-  const students = await getStudents();
+  const students = await fetchAllStudents();
   await Promise.all(students.map(s => deleteDoc(doc(db, 'students', s.id))));
 
   for (const collectionName of ['observations', 'evaluations', 'classes', 'rubrics'] as const) {

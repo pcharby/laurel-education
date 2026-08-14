@@ -23,13 +23,17 @@ vi.mock('firebase/firestore', () => ({
   addDoc: vi.fn(async () => ({ id: 'new-doc-id' })),
   deleteDoc: vi.fn(async () => undefined),
   doc: vi.fn((_db: unknown, col: string, id: string) => ({ __type: 'doc', col, id })),
+  setDoc: vi.fn(async () => undefined),
+  getDoc: vi.fn(async () => ({ exists: () => false, data: () => undefined })),
+  updateDoc: vi.fn(async () => undefined),
+  deleteField: vi.fn(() => '__deleteField__'),
 }))
 
 vi.mock('firebase/functions', () => ({
   httpsCallable: vi.fn(() => vi.fn(async () => ({ data: undefined }))),
 }))
 
-import { where, addDoc } from 'firebase/firestore'
+import { where, addDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore'
 import * as storage from './storage'
 
 describe('storage.ts teacher scoping', () => {
@@ -139,6 +143,52 @@ describe('storage.ts teacher scoping', () => {
       expect(addDoc).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ teacherId: 'teacher-abc' })
+      )
+    })
+
+    // Teachers don't carry a roster between school years - see
+    // schoolYearLockdownSweep - so getStudents()'s default meaning of "my
+    // students" excludes anything the sweep has archived, without every
+    // picker screen needing to remember to filter it out itself.
+    it('getStudents filters out archived students', async () => {
+      vi.mocked(getDocs).mockResolvedValueOnce({
+        docs: [
+          { id: 's1', data: () => ({ teacherId: 'teacher-abc', name: 'Active Student', grade: '5', createdAt: '2026-01-01' }) },
+          { id: 's2', data: () => ({ teacherId: 'teacher-abc', name: 'Old Student', grade: '5', createdAt: '2025-01-01', archived: true }) },
+        ],
+      } as never)
+
+      const result = await storage.getStudents()
+      expect(result.map(s => s.id)).toEqual(['s1'])
+    })
+
+    it('getArchivedStudents returns only archived students', async () => {
+      vi.mocked(getDocs).mockResolvedValueOnce({
+        docs: [
+          { id: 's1', data: () => ({ teacherId: 'teacher-abc', name: 'Active Student', grade: '5', createdAt: '2026-01-01' }) },
+          { id: 's2', data: () => ({ teacherId: 'teacher-abc', name: 'Old Student', grade: '5', createdAt: '2025-01-01', archived: true }) },
+        ],
+      } as never)
+
+      const result = await storage.getArchivedStudents()
+      expect(result.map(s => s.id)).toEqual(['s2'])
+    })
+
+    it('saveTeacherProfile passes schoolYearEndDate through untouched', async () => {
+      const fakeTimestamp = { seconds: 1, nanoseconds: 0 } as never
+      await storage.saveTeacherProfile({ schoolYearEndDate: fakeTimestamp })
+      expect(setDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ schoolYearEndDate: fakeTimestamp }),
+        expect.anything()
+      )
+    })
+
+    it('clearSchoolYearEndDate clears the field via the deleteField() sentinel, not a stored null', async () => {
+      await storage.clearSchoolYearEndDate()
+      expect(updateDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ schoolYearEndDate: '__deleteField__' })
       )
     })
   })

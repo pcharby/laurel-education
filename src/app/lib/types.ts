@@ -1,3 +1,5 @@
+import type { Timestamp } from 'firebase/firestore';
+
 export interface Student {
   id: string;
   /** Firebase Auth uid of the owning teacher; every doc is scoped to one teacher. */
@@ -7,6 +9,15 @@ export interface Student {
   name: string;
   grade: string;
   createdAt: string;
+  /**
+   * Stamped by the schoolYearLockdownSweep Cloud Function only, never by the
+   * client - the teacher's schoolYearEndDate at the moment this student was
+   * locked, captured once so later changing the profile date doesn't affect
+   * when this record archives. See SchoolClass.schoolYearEndDate.
+   */
+  schoolYearEndDate?: Timestamp;
+  /** Stamped by schoolYearLockdownSweep only, 90 days after schoolYearEndDate. */
+  archived?: boolean;
 }
 
 export interface SchoolClass {
@@ -18,6 +29,10 @@ export interface SchoolClass {
   name?: string;
   schedule?: string;
   createdAt: string;
+  /** Stamped by schoolYearLockdownSweep only - see Student.schoolYearEndDate. */
+  schoolYearEndDate?: Timestamp;
+  /** Stamped by schoolYearLockdownSweep only, 90 days after schoolYearEndDate. */
+  archived?: boolean;
 }
 
 export interface Observation {
@@ -67,6 +82,14 @@ export interface Rubric {
 export interface TeacherProfile {
   jurisdiction?: string;
   schoolName?: string;
+  /**
+   * The teacher's chosen end-of-school-year date. Classes/students go
+   * read-only 2 days after this date (enforced live in firestore.rules,
+   * purely derived from this field - no separate lock flag) and archive 90
+   * days after it (via schoolYearLockdownSweep). Absent = feature never
+   * engaged, permanently a no-op.
+   */
+  schoolYearEndDate?: Timestamp;
   updatedAt: string;
 }
 

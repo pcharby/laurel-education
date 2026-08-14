@@ -42,7 +42,7 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
   useEffect(() => {
     if (isDemo) return;
     getClasses().then((classes: SchoolClass[]) => {
-      const distinct = Array.from(new Set(classes.map(c => c.subject)));
+      const distinct = Array.from(new Set(classes.filter(c => !c.archived).map(c => c.subject)));
       setSubjects(distinct);
       if (distinct.length > 0) setSelectedSubject(distinct[0]);
       setSubjectsLoading(false);

@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Student } from '../lib/types';
-import { getStudents } from '../lib/storage';
+import { getStudents, getArchivedStudents } from '../lib/storage';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { ArrowLeft, Search, UserCircle, UserPlus } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Alert, AlertDescription } from './ui/alert';
+import { ArrowLeft, Search, UserCircle, UserPlus, Lock, Archive, ChevronDown, ChevronUp } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
 import { AddStudentDialog } from './AddStudentDialog';
+import { useSchoolYearLock } from '../lib/useSchoolYearLock';
 
 interface StudentSummarySelectorProps {
   onSelectStudent: (student: Student) => void;
@@ -15,9 +18,18 @@ interface StudentSummarySelectorProps {
 }
 
 export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSummarySelectorProps) {
+  const lockInfo = useSchoolYearLock();
+  const locked = lockInfo.status === 'locked';
   const [students, setStudents] = useState<Student[]>([]);
+  const [archivedStudents, setArchivedStudents] = useState<Student[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  const loadArchivedStudents = () => {
+    if (auth.currentUser?.isAnonymous) return;
+    getArchivedStudents().then(setArchivedStudents);
+  };
 
   const loadStudents = () => {
     getStudents().then(stored => {
@@ -39,6 +51,7 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
 
   useEffect(() => {
     loadStudents();
+    loadArchivedStudents();
   }, []);
 
   const filteredStudents = students.filter(student =>
@@ -56,13 +69,27 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
             <LaurelLogo height="md" showProductName />
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setShowAddDialog(true)} className="gap-2">
+            <Button
+              size="sm"
+              onClick={() => setShowAddDialog(true)}
+              className="gap-2"
+              disabled={locked}
+              title={locked ? 'Your school year is locked - update the end date in Settings to add students.' : undefined}
+            >
               <UserPlus className="w-4 h-4" />
               Add Student
             </Button>
           </div>
         </div>
         <h2 className="text-xl font-semibold mb-3 text-gray-800">Student Summaries</h2>
+        {locked && (
+          <Alert className="bg-amber-50 border-amber-200 mb-3">
+            <Lock className="w-4 h-4" />
+            <AlertDescription>
+              Your school year is locked — new students can't be added until you set a new end date in Settings &gt; School Profile.
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
@@ -85,7 +112,7 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
                 : 'No students match your search.'}
             </p>
             {students.length === 0 && (
-              <Button onClick={() => setShowAddDialog(true)} className="gap-2">
+              <Button onClick={() => setShowAddDialog(true)} className="gap-2" disabled={locked}>
                 <UserPlus className="w-4 h-4" />
                 Add Student
               </Button>
@@ -112,6 +139,44 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
               </Button>
             ))}
           </div>
+        )}
+
+        {archivedStudents.length > 0 && (
+          <Card className="mt-4">
+            <CardHeader>
+              <button
+                className="w-full flex items-center justify-between text-left"
+                onClick={() => setShowArchived(v => !v)}
+              >
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Archive className="w-4 h-4 text-muted-foreground" />
+                  Archived Students ({archivedStudents.length})
+                </CardTitle>
+                {showArchived ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+            </CardHeader>
+            {showArchived && (
+              <CardContent className="space-y-2">
+                {archivedStudents.map(student => (
+                  <Button
+                    key={student.id}
+                    onClick={() => onSelectStudent(student)}
+                    className="w-full h-auto p-4 bg-muted/30 hover:bg-muted/50 transition-all justify-start"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center shrink-0">
+                        <UserCircle className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-sm text-muted-foreground">{formatStudentName(student.name)}</p>
+                        <p className="text-xs text-muted-foreground">Grade {student.grade}</p>
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              </CardContent>
+            )}
+          </Card>
         )}
       </div>
 

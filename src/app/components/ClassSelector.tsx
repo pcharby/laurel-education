@@ -3,9 +3,11 @@ import { SchoolClass } from '../lib/types';
 import { getClasses } from '../lib/storage';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
-import { BookOpen, Users, Calculator, Beaker, BookText, Palette, LogOut, Settings, Plus, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from './ui/alert';
+import { BookOpen, Users, Calculator, Beaker, BookText, Palette, LogOut, Settings, Plus, Loader2, Lock } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 import { useSchoolName } from '../lib/useSchoolName';
+import { useSchoolYearLock } from '../lib/useSchoolYearLock';
 
 interface ClassSelectorProps {
   onSelectClass: (classInfo: SchoolClass) => void;
@@ -55,6 +57,7 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
   const [loading, setLoading] = useState(true);
   const isDemo = auth.currentUser?.isAnonymous ?? false;
   const { schoolName, badgeLetter } = useSchoolName();
+  const lockInfo = useSchoolYearLock();
 
   useEffect(() => {
     if (isDemo) {
@@ -63,7 +66,7 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
       return;
     }
     getClasses().then(result => {
-      setClasses(result);
+      setClasses(result.filter(c => !c.archived));
       setLoading(false);
     });
   }, [isDemo]);
@@ -113,6 +116,15 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
           <Users className="w-5 h-5 mr-2" />
           View Student Summary
         </Button>
+
+        {lockInfo.status === 'locked' && (
+          <Alert className="bg-amber-50 border-amber-200 mt-4 max-w-md mx-auto text-left">
+            <Lock className="w-4 h-4" />
+            <AlertDescription>
+              Your school year is locked. Set a new end date in Settings &gt; School Profile to unlock and start adding classes again.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       <div className="flex-1 space-y-3 pb-4 pt-4">

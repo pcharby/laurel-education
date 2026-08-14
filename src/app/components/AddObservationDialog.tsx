@@ -288,8 +288,18 @@ export function AddObservationDialog({
 
     try {
       await saveObservation(newObservation, mediaFile);
-    } catch {
-      setError('Could not save this observation. Please try again.');
+    } catch (err) {
+      // Two possible causes once school-year lockdown exists: firestore.rules
+      // rejects the write directly for text observations ('permission-denied'),
+      // or saveObservation's own client-side check throws first for
+      // audio/image observations (storage.rules can't enforce the same lock -
+      // see storage.ts). Backstop in case stale navigation state reaches this
+      // dialog despite the upstream entry points already being disabled.
+      const isLocked = (err instanceof Error && err.message.includes('school year is locked'))
+        || (err as { code?: string })?.code === 'permission-denied';
+      setError(isLocked
+        ? 'Your school year is locked. Update the end date in Settings to add new observations.'
+        : 'Could not save this observation. Please try again.');
       return;
     }
 
