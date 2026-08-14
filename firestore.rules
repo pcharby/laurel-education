@@ -24,10 +24,19 @@ service cloud.firestore {
     // evaluations are never gated (report generation should keep working
     // past lockout - see functions/src/schoolYearLockdown.ts for the
     // archival side of this feature).
+    //
+    // exists() MUST be checked before get(...).data: a brand-new teacher who
+    // has never saved anything in Settings has no teacherProfiles doc yet at
+    // all, and accessing .data on a get() of a nonexistent document throws,
+    // which denies the whole rule rather than gracefully evaluating to
+    // false - found live-testing the account-purge tool, when a truly fresh
+    // signed-up account (this codepath's most common real caller) couldn't
+    // create its first class.
     function isTeacherLocked() {
-      let profile = get(/databases/$(database)/documents/teacherProfiles/$(request.auth.uid)).data;
-      return profile.schoolYearEndDate is timestamp
-        && request.time > profile.schoolYearEndDate + duration.value(2, 'd');
+      let profilePath = /databases/$(database)/documents/teacherProfiles/$(request.auth.uid);
+      return exists(profilePath)
+        && get(profilePath).data.schoolYearEndDate is timestamp
+        && request.time > get(profilePath).data.schoolYearEndDate + duration.value(2, 'd');
     }
 
     match /classes/{classId} {
