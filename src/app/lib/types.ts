@@ -16,7 +16,7 @@ export interface Student {
    * when this record archives. See SchoolClass.schoolYearEndDate.
    */
   schoolYearEndDate?: Timestamp;
-  /** Stamped by schoolYearLockdownSweep only, 90 days after schoolYearEndDate. */
+  /** Stamped by schoolYearLockdownSweep only, 60 days after schoolYearEndDate (or immediately via a manual archive action). */
   archived?: boolean;
 }
 
@@ -31,7 +31,7 @@ export interface SchoolClass {
   createdAt: string;
   /** Stamped by schoolYearLockdownSweep only - see Student.schoolYearEndDate. */
   schoolYearEndDate?: Timestamp;
-  /** Stamped by schoolYearLockdownSweep only, 90 days after schoolYearEndDate. */
+  /** Stamped by schoolYearLockdownSweep only, 60 days after schoolYearEndDate (or immediately via a manual archive action). */
   archived?: boolean;
 }
 

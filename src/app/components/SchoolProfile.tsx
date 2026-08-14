@@ -5,11 +5,12 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { ArrowLeft, School, Save, Loader2, CalendarClock, Lock } from 'lucide-react';
+import { ArrowLeft, School, Save, Loader2, CalendarClock, Lock, Archive } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { LaurelLogo } from './LaurelLogo';
-import { getTeacherProfile, saveTeacherProfile, clearSchoolYearEndDate } from '../lib/storage';
+import { auth } from '../../firebase';
+import { getTeacherProfile, saveTeacherProfile, clearSchoolYearEndDate, archiveMyPreviousYear } from '../lib/storage';
 import { getSchoolYearLockStatus, SchoolYearLockInfo } from '../lib/schoolYearLock';
 
 interface SchoolProfileProps {
@@ -34,14 +35,26 @@ const toDateInputValue = (date: Date): string => {
 const parseDateInputValue = (value: string): Date => new Date(`${value}T23:59:59`);
 
 export function SchoolProfile({ onBack }: SchoolProfileProps) {
+  // No real teacherProfile behind a demo session - same reasoning as
+  // useSchoolName.ts/useSchoolYearLock.ts, just applied inline here since
+  // this screen also writes, not just reads.
+  const isDemo = auth.currentUser?.isAnonymous ?? false;
   const [schoolName, setSchoolName] = useState('');
   const [schoolYearEndDateInput, setSchoolYearEndDateInput] = useState('');
   const [lockInfo, setLockInfo] = useState<SchoolYearLockInfo>({ status: 'none', lockDate: null, archiveDate: null });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   const loadProfile = () => {
+    if (isDemo) {
+      setSchoolName('Riverside Elementary');
+      setSchoolYearEndDateInput('');
+      setLockInfo({ status: 'none', lockDate: null, archiveDate: null });
+      setLoading(false);
+      return;
+    }
     getTeacherProfile().then(profile => {
       setSchoolName(profile?.schoolName ?? '');
       setSchoolYearEndDateInput(profile?.schoolYearEndDate ? toDateInputValue(profile.schoolYearEndDate.toDate()) : '');
@@ -52,9 +65,14 @@ export function SchoolProfile({ onBack }: SchoolProfileProps) {
 
   useEffect(() => {
     loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSave = async () => {
+    if (isDemo) {
+      toast.success('School profile saved.');
+      return;
+    }
     setSaving(true);
     try {
       await saveTeacherProfile({
@@ -71,6 +89,11 @@ export function SchoolProfile({ onBack }: SchoolProfileProps) {
   };
 
   const handleClearSchoolYear = async () => {
+    if (isDemo) {
+      setSchoolYearEndDateInput('');
+      toast.success('School year end date cleared.');
+      return;
+    }
     setClearing(true);
     try {
       await clearSchoolYearEndDate();
@@ -80,6 +103,26 @@ export function SchoolProfile({ onBack }: SchoolProfileProps) {
       toast.error('Could not clear the school year end date. Please try again.');
     } finally {
       setClearing(false);
+    }
+  };
+
+  const handleArchiveNow = async () => {
+    if (isDemo) {
+      toast.success('Nothing to archive in demo mode.');
+      return;
+    }
+    setArchiving(true);
+    try {
+      const { archivedCount } = await archiveMyPreviousYear();
+      toast.success(
+        archivedCount > 0
+          ? `Archived ${archivedCount} record${archivedCount === 1 ? '' : 's'} from last year.`
+          : 'Nothing left to archive - already up to date.'
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not archive last year. Please try again.');
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -148,17 +191,28 @@ export function SchoolProfile({ onBack }: SchoolProfileProps) {
                     disabled={saving}
                   />
                   <p className="text-xs text-gray-500">
-                    Classes and students become read-only 2 days after this date, and archive 90 days after it. Set a new date each year to unlock and start fresh.
+                    Classes and students become read-only 2 days after this date, and archive automatically 60 days after it - or you can archive them immediately below once the date has passed. Set a new date each year to unlock and start fresh.
                   </p>
                 </div>
 
                 {lockInfo.status === 'locked' && (
-                  <Alert className="bg-amber-50 border-amber-200">
-                    <Lock className="w-4 h-4" />
-                    <AlertDescription>
-                      Read-only since {lockInfo.lockDate ? format(lockInfo.lockDate, 'MMM d, yyyy') : ''} — classes archive {lockInfo.archiveDate ? format(lockInfo.archiveDate, 'MMM d, yyyy') : ''}. Set a new date above and save to unlock.
-                    </AlertDescription>
-                  </Alert>
+                  <>
+                    <Alert className="bg-amber-50 border-amber-200">
+                      <Lock className="w-4 h-4" />
+                      <AlertDescription>
+                        Read-only since {lockInfo.lockDate ? format(lockInfo.lockDate, 'MMM d, yyyy') : ''} — classes archive {lockInfo.archiveDate ? format(lockInfo.archiveDate, 'MMM d, yyyy') : ''} unless you archive them now. Set a new date above and save to unlock.
+                      </AlertDescription>
+                    </Alert>
+                    <Button
+                      size="sm"
+                      onClick={handleArchiveNow}
+                      disabled={archiving}
+                      className="gap-2 bg-gray-700 hover:bg-gray-800 text-white"
+                    >
+                      {archiving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+                      Archive previous year now
+                    </Button>
+                  </>
                 )}
                 {lockInfo.status === 'active' && (
                   <Alert className="bg-blue-50 border-blue-200">

@@ -6,7 +6,7 @@ import { TeacherProfile } from './types'
 const fakeTimestamp = (date: Date): Timestamp => ({ toDate: () => date }) as unknown as Timestamp
 
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000
-const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000
+const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000
 
 describe('getSchoolYearLockStatus', () => {
   afterEach(() => {
@@ -46,6 +46,6 @@ describe('getSchoolYearLockStatus', () => {
 
     const result = getSchoolYearLockStatus(profile)
     expect(result.lockDate?.getTime()).toBe(endDate.getTime() + TWO_DAYS_MS)
-    expect(result.archiveDate?.getTime()).toBe(endDate.getTime() + NINETY_DAYS_MS)
+    expect(result.archiveDate?.getTime()).toBe(endDate.getTime() + SIXTY_DAYS_MS)
   })
 })

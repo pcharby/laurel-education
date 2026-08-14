@@ -265,6 +265,19 @@ export const clearSchoolYearEndDate = async (): Promise<void> => {
   });
 };
 
+// Archiving requires a Cloud Function since the archived/schoolYearEndDate
+// stamp on each class/student is meant to be Cloud-Function-only - lets a
+// teacher skip ARCHIVE_GRACE_MS entirely and archive their just-ended year
+// the moment they're ready to set up a new one, rather than waiting on the
+// scheduled sweep. Returns how many records were archived, in case the UI
+// wants to report it (e.g. "0" if there was nothing left to do).
+const callArchiveMyPreviousYear = httpsCallable<void, { archivedCount: number }>(functions, 'archiveMyPreviousYear');
+
+export const archiveMyPreviousYear = async (): Promise<{ archivedCount: number }> => {
+  const result = await callArchiveMyPreviousYear();
+  return result.data;
+};
+
 // Curriculum resources: a shared, cross-teacher library, not scoped to the
 // signed-in teacher - see the CurriculumResource type and firestore.rules.
 export const getCurriculumResources = async (

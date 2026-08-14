@@ -1,11 +1,18 @@
 import './admin.js';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
 import { getFirestore, Firestore, QueryDocumentSnapshot, Timestamp } from 'firebase-admin/firestore';
 import { REGION } from './region.js';
 
 const LOCK_GRACE_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
-const ARCHIVE_GRACE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+// A typical school year (Sept 1 - Jun 30) is only ~63 days from end date to
+// the next year starting - 90 days would leave the previous year's classes
+// and students visible for a full month into the new one. 60 days lands
+// comfortably before Sept 1 for that calendar while still giving real
+// slack after the end date. Teachers who want it gone sooner don't have to
+// wait on this at all - see archiveMyPreviousYear below.
+const ARCHIVE_GRACE_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
 const FIRESTORE_BATCH_LIMIT = 500;
 
 // Classes and students get the identical stamp-then-archive treatment - a
@@ -51,7 +58,7 @@ async function stampTeacherRecords(
   }
 }
 
-// 90 days after a class/student's stamped schoolYearEndDate, archive it -
+// ARCHIVE_GRACE_MS after a class/student's stamped schoolYearEndDate, archive it -
 // hides it from the active pickers (ClassSelector, StudentSummarySelector's
 // default list) without ever touching the underlying Observation/Evaluation
 // records, which persist regardless of a class's or student's lifecycle.
@@ -92,5 +99,55 @@ export const schoolYearLockdownSweep = onSchedule(
   async () => {
     const { lockedTeacherCount } = await runSchoolYearLockdownSweep(getFirestore());
     logger.info(`School-year lockdown sweep complete: stamped records for ${lockedTeacherCount} locked teacher(s).`);
+  }
+);
+
+// Lets a teacher archive their own just-ended year immediately rather than
+// waiting on ARCHIVE_GRACE_MS - useful right when they're setting up a new
+// year and don't want last year's roster mixed in with it. Same
+// stamp-then-archive logic as the scheduled sweep, but with no day-count
+// wait at all: anything eligible (createdAt before their own
+// schoolYearEndDate) archives on this call, whether it was already stamped
+// by a previous sweep run or not.
+async function archiveTeacherNow(
+  db: Firestore,
+  teacherId: string,
+  schoolYearEndDate: Timestamp
+): Promise<{ archivedCount: number }> {
+  await stampTeacherRecords(db, teacherId, schoolYearEndDate);
+
+  let archivedCount = 0;
+  for (const collectionName of STAMPABLE_COLLECTIONS) {
+    const snap = await db.collection(collectionName).where('teacherId', '==', teacherId).get();
+    const toArchive = snap.docs.filter((d) => {
+      const data = d.data();
+      return !!data.schoolYearEndDate && data.archived !== true;
+    });
+    await commitInBatches(db, toArchive, { archived: true });
+    archivedCount += toArchive.length;
+  }
+
+  return { archivedCount };
+}
+
+export const archiveMyPreviousYear = onCall(
+  { region: REGION },
+  async (request): Promise<{ archivedCount: number }> => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+
+    const db = getFirestore();
+    const profileSnap = await db.collection('teacherProfiles').doc(request.auth.uid).get();
+    const schoolYearEndDate = profileSnap.data()?.schoolYearEndDate as Timestamp | undefined;
+
+    if (!schoolYearEndDate) {
+      throw new HttpsError('failed-precondition', 'Set a school year end date first.');
+    }
+    if (Timestamp.now().toMillis() < schoolYearEndDate.toMillis()) {
+      throw new HttpsError('failed-precondition', 'Your school year end date hasn\'t passed yet.');
+    }
+
+    return archiveTeacherNow(db, request.auth.uid, schoolYearEndDate);
   }
 );
