@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { SchoolClass } from '../lib/types';
-import { getClasses } from '../lib/storage';
+import { SchoolClass, School } from '../lib/types';
+import { getClasses, getSchools } from '../lib/storage';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
@@ -8,6 +8,7 @@ import { BookOpen, Users, Calculator, Beaker, BookText, Palette, LogOut, Setting
 import { LaurelLogo } from './LaurelLogo';
 import { useSchoolName } from '../lib/useSchoolName';
 import { useSchoolYearLock } from '../lib/useSchoolYearLock';
+import { useTeacherDisplayName } from '../lib/useTeacherDisplayName';
 
 interface ClassSelectorProps {
   onSelectClass: (classInfo: SchoolClass) => void;
@@ -55,9 +56,12 @@ const getSubjectColor = (subject: string) => {
 export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, onSettings, onManageClasses }: ClassSelectorProps) {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
   const isDemo = auth.currentUser?.isAnonymous ?? false;
   const { schoolName, badgeLetter } = useSchoolName();
   const lockInfo = useSchoolYearLock();
+  const displayName = useTeacherDisplayName();
 
   useEffect(() => {
     if (isDemo) {
@@ -69,9 +73,14 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
       setClasses(result.filter(c => !c.archived));
       setLoading(false);
     });
+    getSchools().then(setSchools);
   }, [isDemo]);
 
-  const teacherLabel = auth.currentUser?.email ?? 'there';
+  // Only shown to teachers who've set up more than one school - otherwise
+  // this filter would just be a no-op control cluttering the common case.
+  const visibleClasses = schools.length > 1 && selectedSchoolId !== 'all'
+    ? classes.filter(c => c.schoolId === selectedSchoolId)
+    : classes;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F7F5FC] to-[#EBE8F5] flex flex-col p-4">
@@ -106,7 +115,7 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
             <LaurelLogo height="md" showProductName />
           </div>
         </div>
-        <h1 className="text-2xl font-semibold mb-2 text-gray-800">Welcome{isDemo ? '' : `, ${teacherLabel}`}!</h1>
+        <h1 className="text-2xl font-semibold mb-2 text-gray-800">Welcome{displayName ? `, ${displayName}` : ''}!</h1>
         <p className="text-gray-600 mb-4">Select Your Class</p>
 
         <Button
@@ -127,6 +136,28 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
         )}
       </div>
 
+      {schools.length > 1 && classes.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-2 max-w-md mx-auto w-full">
+          <Button
+            size="sm"
+            onClick={() => setSelectedSchoolId('all')}
+            className={selectedSchoolId === 'all' ? 'bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4]' : ''}
+          >
+            All Schools
+          </Button>
+          {schools.map(school => (
+            <Button
+              key={school.id}
+              size="sm"
+              onClick={() => setSelectedSchoolId(school.id)}
+              className={selectedSchoolId === school.id ? 'bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4]' : ''}
+            >
+              {school.name}
+            </Button>
+          ))}
+        </div>
+      )}
+
       <div className="flex-1 space-y-3 pb-4 pt-4">
         {loading ? (
           <div className="flex justify-center py-12">
@@ -146,8 +177,10 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
               Add Your First Class
             </Button>
           </div>
+        ) : visibleClasses.length === 0 ? (
+          <p className="text-center text-gray-500 py-8">No classes for this school yet.</p>
         ) : (
-          classes.map((classInfo) => {
+          visibleClasses.map((classInfo) => {
             const SubjectIcon = getSubjectIcon(classInfo.subject);
             const subjectColor = getSubjectColor(classInfo.subject);
             return (

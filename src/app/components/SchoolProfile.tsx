@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { ArrowLeft, School, Save, Loader2, CalendarClock, Lock, Archive } from 'lucide-react';
+import { ArrowLeft, School, User, Save, Loader2, CalendarClock, Lock, Archive } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { LaurelLogo } from './LaurelLogo';
@@ -39,6 +39,7 @@ export function SchoolProfile({ onBack }: SchoolProfileProps) {
   // useSchoolName.ts/useSchoolYearLock.ts, just applied inline here since
   // this screen also writes, not just reads.
   const isDemo = auth.currentUser?.isAnonymous ?? false;
+  const [displayName, setDisplayName] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [schoolYearEndDateInput, setSchoolYearEndDateInput] = useState('');
   const [lockInfo, setLockInfo] = useState<SchoolYearLockInfo>({ status: 'none', lockDate: null, archiveDate: null });
@@ -49,6 +50,7 @@ export function SchoolProfile({ onBack }: SchoolProfileProps) {
 
   const loadProfile = () => {
     if (isDemo) {
+      setDisplayName('');
       setSchoolName('Riverside Elementary');
       setSchoolYearEndDateInput('');
       setLockInfo({ status: 'none', lockDate: null, archiveDate: null });
@@ -56,6 +58,7 @@ export function SchoolProfile({ onBack }: SchoolProfileProps) {
       return;
     }
     getTeacherProfile().then(profile => {
+      setDisplayName(profile?.displayName ?? '');
       setSchoolName(profile?.schoolName ?? '');
       setSchoolYearEndDateInput(profile?.schoolYearEndDate ? toDateInputValue(profile.schoolYearEndDate.toDate()) : '');
       setLockInfo(getSchoolYearLockStatus(profile));
@@ -76,6 +79,7 @@ export function SchoolProfile({ onBack }: SchoolProfileProps) {
     setSaving(true);
     try {
       await saveTeacherProfile({
+        displayName: displayName.trim(),
         schoolName: schoolName.trim(),
         ...(schoolYearEndDateInput && { schoolYearEndDate: Timestamp.fromDate(parseDateInputValue(schoolYearEndDateInput)) }),
       });
@@ -140,6 +144,33 @@ export function SchoolProfile({ onBack }: SchoolProfileProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <Card className="border-l-4 border-l-[#6B5FE4]">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <User className="w-5 h-5 text-[#6B5FE4]" />
+              <CardTitle className="text-base">Your Name</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {loading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-[#6B5FE4]" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Shown in your greeting</Label>
+                <Input
+                  id="displayName"
+                  placeholder="e.g. Sarah Chen"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  disabled={saving}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="border-l-4 border-l-[#6B5FE4]">
           <CardHeader>
             <div className="flex items-center gap-2">

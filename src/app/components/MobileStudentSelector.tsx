@@ -27,6 +27,13 @@ export function MobileStudentSelector({
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
 
+  // A class tagged with a school only shows students tagged with that same
+  // school - keeps two schools' Grade 5 rosters from bleeding together for
+  // an itinerant teacher. A class with no school (the common single-school
+  // case) keeps the old grade-only behavior, unaffected.
+  const matchesClass = (s: Student) =>
+    s.grade === classInfo.grade && (!classInfo.schoolId || s.schoolId === classInfo.schoolId);
+
   const loadStudents = () => {
     getStudents().then(stored => {
       if (stored.length === 0 && auth.currentUser?.isAnonymous) {
@@ -44,17 +51,18 @@ export function MobileStudentSelector({
           { id: '10', teacherId: demoTeacherId, name: 'James Wilson', grade: '5', createdAt: new Date().toISOString() },
         ];
         setHasAnyStudents(mockStudents.length > 0);
-        setStudents(mockStudents.filter(s => s.grade === classInfo.grade));
+        setStudents(mockStudents.filter(matchesClass));
       } else {
         setHasAnyStudents(stored.length > 0);
-        setStudents(stored.filter(s => s.grade === classInfo.grade));
+        setStudents(stored.filter(matchesClass));
       }
     });
   };
 
   useEffect(() => {
     loadStudents();
-  }, [classInfo.grade]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classInfo.grade, classInfo.schoolId]);
 
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -151,6 +159,7 @@ export function MobileStudentSelector({
         onClose={() => setShowAddDialog(false)}
         onSuccess={loadStudents}
         defaultGrade={classInfo.grade}
+        defaultSchoolId={classInfo.schoolId}
       />
     </div>
   );

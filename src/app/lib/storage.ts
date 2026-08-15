@@ -1,4 +1,4 @@
-import { Student, Observation, Evaluation, BugReport, SchoolClass, TeacherProfile, CurriculumResource, Rubric } from './types';
+import { Student, Observation, Evaluation, BugReport, SchoolClass, TeacherProfile, CurriculumResource, Rubric, Strand, School } from './types';
 import { auth, db, storage, functions } from '../../firebase';
 import {
   collection,
@@ -16,6 +16,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { getSchoolYearLockStatus } from './schoolYearLock';
+import { compareClasses } from './sortClasses';
 
 const getTeacherId = (): string => {
   const uid = auth.currentUser?.uid;
@@ -67,11 +68,14 @@ export const deleteStudent = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'students', id));
 };
 
-// Classes
+// Classes - sorted centrally here (subject, then grade, then section) so
+// every consumer gets a consistent, predictable order automatically rather
+// than each screen needing to remember to sort Firestore's unordered
+// results itself.
 export const getClasses = async (): Promise<SchoolClass[]> => {
   const q = query(collection(db, 'classes'), where('teacherId', '==', getTeacherId()));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(d => ({ ...(d.data() as SchoolClass), id: d.id }));
+  return snapshot.docs.map(d => ({ ...(d.data() as SchoolClass), id: d.id })).sort(compareClasses);
 };
 
 export const saveClass = async (schoolClass: Omit<SchoolClass, 'id' | 'teacherId'>): Promise<void> => {
@@ -87,6 +91,34 @@ export const updateClass = async (
 
 export const deleteClass = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'classes', id));
+};
+
+// Schools - a lightweight sub-structure for itinerant/multi-school teachers
+// so classes and student rosters can be scoped per school (SchoolClass.
+// schoolId / Student.schoolId). Not gated by isTeacherLocked(): which
+// schools a teacher works at is organizational structure, not a piece of
+// this year's classroom content, so it stays editable through a lockdown
+// the same way TeacherProfile does.
+export const getSchools = async (): Promise<School[]> => {
+  const q = query(collection(db, 'schools'), where('teacherId', '==', getTeacherId()));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(d => ({ ...(d.data() as School), id: d.id })).sort((a, b) => a.name.localeCompare(b.name));
+};
+
+export const addSchool = async (name: string): Promise<void> => {
+  await addDoc(collection(db, 'schools'), {
+    name,
+    teacherId: getTeacherId(),
+    createdAt: new Date().toISOString(),
+  });
+};
+
+export const updateSchool = async (id: string, name: string): Promise<void> => {
+  await updateDoc(doc(db, 'schools', id), { name });
+};
+
+export const deleteSchool = async (id: string): Promise<void> => {
+  await deleteDoc(doc(db, 'schools', id));
 };
 
 // Rubrics - private per-teacher labels used when recording observations,
@@ -112,6 +144,31 @@ export const addRubric = async (subject: string, label: string): Promise<void> =
 
 export const deleteRubric = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'rubrics', id));
+};
+
+// Curriculum strands - same shape/ownership as Rubrics above, shown in the
+// "Curriculum Strand" picker when recording an observation.
+export const getStrands = async (subject: string): Promise<Strand[]> => {
+  const q = query(
+    collection(db, 'strands'),
+    where('teacherId', '==', getTeacherId()),
+    where('subject', '==', subject)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(d => ({ ...(d.data() as Strand), id: d.id }));
+};
+
+export const addStrand = async (subject: string, label: string): Promise<void> => {
+  await addDoc(collection(db, 'strands'), {
+    subject,
+    label,
+    teacherId: getTeacherId(),
+    createdAt: new Date().toISOString(),
+  });
+};
+
+export const deleteStrand = async (id: string): Promise<void> => {
+  await deleteDoc(doc(db, 'strands', id));
 };
 
 // Observations
@@ -243,7 +300,7 @@ export const getTeacherProfile = async (): Promise<TeacherProfile | null> => {
 };
 
 export const saveTeacherProfile = async (
-  updates: Partial<Pick<TeacherProfile, 'jurisdiction' | 'schoolName' | 'schoolYearEndDate'>>
+  updates: Partial<Pick<TeacherProfile, 'displayName' | 'jurisdiction' | 'schoolName' | 'schoolYearEndDate'>>
 ): Promise<void> => {
   await setDoc(
     doc(db, 'teacherProfiles', getTeacherId()),
@@ -378,7 +435,7 @@ export const deleteAllMyData = async (): Promise<void> => {
   const students = await fetchAllStudents();
   await Promise.all(students.map(s => deleteDoc(doc(db, 'students', s.id))));
 
-  for (const collectionName of ['observations', 'evaluations', 'classes', 'rubrics'] as const) {
+  for (const collectionName of ['observations', 'evaluations', 'classes', 'rubrics', 'strands', 'schools'] as const) {
     const q = query(collection(db, collectionName), where('teacherId', '==', teacherId));
     const snapshot = await getDocs(q);
     await Promise.all(snapshot.docs.map(async (d) => {

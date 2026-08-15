@@ -21,4 +21,13 @@ describe('formatStudentName', () => {
   it('uppercases a lowercase last initial', () => {
     expect(formatStudentName('emma thompson')).toBe('emma T.')
   })
+
+  it('leaves an already-masked bulk-import name unchanged, even with an escalated multi-letter initial', () => {
+    expect(formatStudentName('Emma Thomp.')).toBe('Emma Thomp.')
+  })
+
+  it('leaves an already-masked bulk-import numeric-suffix name unchanged', () => {
+    expect(formatStudentName('Madonna (1)')).toBe('Madonna (1)')
+    expect(formatStudentName('Emma Thompson. (2)')).toBe('Emma Thompson. (2)')
+  })
 })

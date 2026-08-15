@@ -41,7 +41,7 @@ export async function deleteAllDataForTeacher(db: Firestore, bucket: StorageBuck
   const studentsSnap = await db.collection('students').where('teacherId', '==', teacherId).get();
   await commitDeleteBatches(db, studentsSnap.docs);
 
-  for (const collectionName of ['observations', 'evaluations', 'classes', 'rubrics'] as const) {
+  for (const collectionName of ['observations', 'evaluations', 'classes', 'rubrics', 'strands', 'schools'] as const) {
     const snap = await db.collection(collectionName).where('teacherId', '==', teacherId).get();
     if (collectionName === 'observations') {
       await deleteStorageObjectsForDocs(bucket, snap.docs);

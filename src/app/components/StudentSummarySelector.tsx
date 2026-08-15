@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Student } from '../lib/types';
-import { getStudents, getArchivedStudents } from '../lib/storage';
+import { Student, School } from '../lib/types';
+import { getStudents, getArchivedStudents, getSchools } from '../lib/storage';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { ArrowLeft, Search, UserCircle, UserPlus, Lock, Archive, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Search, UserCircle, UserPlus, Upload, Lock, Archive, ChevronDown, ChevronUp } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
 import { AddStudentDialog } from './AddStudentDialog';
+import { BulkImportStudentsDialog } from './BulkImportStudentsDialog';
 import { useSchoolYearLock } from '../lib/useSchoolYearLock';
 
 interface StudentSummarySelectorProps {
@@ -25,6 +26,9 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
   const [showArchived, setShowArchived] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showBulkImportDialog, setShowBulkImportDialog] = useState(false);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
 
   const loadArchivedStudents = () => {
     if (auth.currentUser?.isAnonymous) return;
@@ -52,10 +56,14 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
   useEffect(() => {
     loadStudents();
     loadArchivedStudents();
+    getSchools().then(setSchools);
   }, []);
 
+  const bySchool = (student: Student) =>
+    schools.length <= 1 || selectedSchoolId === 'all' || student.schoolId === selectedSchoolId;
+
   const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchQuery.toLowerCase())
+    student.name.toLowerCase().includes(searchQuery.toLowerCase()) && bySchool(student)
   );
 
   return (
@@ -69,6 +77,16 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
             <LaurelLogo height="md" showProductName />
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => setShowBulkImportDialog(true)}
+              className="gap-2"
+              disabled={locked}
+              title={locked ? 'Your school year is locked - update the end date in Settings to add students.' : undefined}
+            >
+              <Upload className="w-4 h-4" />
+              Bulk Import
+            </Button>
             <Button
               size="sm"
               onClick={() => setShowAddDialog(true)}
@@ -89,6 +107,27 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
               Your school year is locked — new students can't be added until you set a new end date in Settings &gt; School Profile.
             </AlertDescription>
           </Alert>
+        )}
+        {schools.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <Button
+              size="sm"
+              onClick={() => setSelectedSchoolId('all')}
+              className={selectedSchoolId === 'all' ? 'bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4]' : ''}
+            >
+              All Schools
+            </Button>
+            {schools.map(school => (
+              <Button
+                key={school.id}
+                size="sm"
+                onClick={() => setSelectedSchoolId(school.id)}
+                className={selectedSchoolId === school.id ? 'bg-gradient-to-r from-[#1A1A40] to-[#6B5FE4]' : ''}
+              >
+                {school.name}
+              </Button>
+            ))}
+          </div>
         )}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -184,6 +223,14 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
         open={showAddDialog}
         onClose={() => setShowAddDialog(false)}
         onSuccess={loadStudents}
+        defaultSchoolId={selectedSchoolId !== 'all' ? selectedSchoolId : undefined}
+      />
+
+      <BulkImportStudentsDialog
+        open={showBulkImportDialog}
+        onClose={() => setShowBulkImportDialog(false)}
+        onSuccess={loadStudents}
+        defaultSchoolId={selectedSchoolId !== 'all' ? selectedSchoolId : undefined}
       />
     </div>
   );

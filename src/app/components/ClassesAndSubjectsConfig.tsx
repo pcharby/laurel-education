@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { SchoolClass } from '../lib/types';
-import { getClasses, saveClass, updateClass, deleteClass } from '../lib/storage';
+import { SchoolClass, School } from '../lib/types';
+import { getClasses, saveClass, updateClass, deleteClass, getSchools } from '../lib/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { Alert, AlertDescription } from './ui/alert';
-import { ArrowLeft, Plus, X, BookOpen, Pencil, Check, Loader2, Lock, Archive, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Plus, X, BookOpen, Pencil, Check, Loader2, Lock, Archive, ChevronDown, ChevronUp, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LaurelLogo } from './LaurelLogo';
 import { useSchoolName } from '../lib/useSchoolName';
@@ -17,7 +17,7 @@ interface ClassesAndSubjectsConfigProps {
   onBack: () => void;
 }
 
-const emptyForm = { subject: '', grade: '', name: '', schedule: '' };
+const emptyForm = { subject: '', grade: '', name: '', schedule: '', schoolId: '' };
 
 export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigProps) {
   const { schoolName, badgeLetter } = useSchoolName();
@@ -26,6 +26,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
+  const [schools, setSchools] = useState<School[]>([]);
 
   // Add/Edit class dialog - null means closed, {} means "adding new"
   const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
@@ -45,6 +46,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
 
   useEffect(() => {
     loadClasses();
+    getSchools().then(setSchools);
   }, []);
 
   const openAdd = () => {
@@ -54,7 +56,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
 
   const openEdit = (c: SchoolClass) => {
     setEditingClass(c);
-    setForm({ subject: c.subject, grade: c.grade, name: c.name ?? '', schedule: c.schedule ?? '' });
+    setForm({ subject: c.subject, grade: c.grade, name: c.name ?? '', schedule: c.schedule ?? '', schoolId: c.schoolId ?? '' });
   };
 
   const closeDialogs = () => {
@@ -71,6 +73,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
         grade: form.grade.trim(),
         name: form.name.trim() || undefined,
         schedule: form.schedule.trim() || undefined,
+        schoolId: form.schoolId || undefined,
         createdAt: new Date().toISOString(),
       });
       toast.success('Class added.');
@@ -92,6 +95,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
         grade: form.grade.trim(),
         name: form.name.trim() || undefined,
         schedule: form.schedule.trim() || undefined,
+        schoolId: form.schoolId || undefined,
       });
       toast.success('Class updated.');
       closeDialogs();
@@ -111,6 +115,17 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
       loadClasses();
     } catch {
       toast.error('Could not remove the class. Please try again.');
+    }
+  };
+
+  const archiveClass = async (id: string) => {
+    if (!confirm("Archive this class? It will move to Archived Classes and won't appear in your class selection menu. There's no undo from here - a teacher can flip it back by hand if it was archived by mistake.")) return;
+    try {
+      await updateClass(id, { archived: true });
+      toast.success('Class archived.');
+      loadClasses();
+    } catch {
+      toast.error('Could not archive the class. Please try again.');
     }
   };
 
@@ -186,6 +201,12 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
                         {classInfo.schedule && (
                           <p className="text-xs text-muted-foreground mt-1">{classInfo.schedule}</p>
                         )}
+                        {classInfo.schoolId && (
+                          <p className="text-xs text-[#6B5FE4] mt-1 flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />
+                            {schools.find(s => s.id === classInfo.schoolId)?.name ?? 'Unknown school'}
+                          </p>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -197,6 +218,16 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
                         >
                           <Pencil className="w-3.5 h-3.5 mr-1" />
                           Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => archiveClass(classInfo.id)}
+                          disabled={locked}
+                          title={locked ? 'Your school year is locked - update the end date in Settings to archive classes.' : "Archive this class now, without waiting for the school year to end"}
+                        >
+                          <Archive className="w-3.5 h-3.5 mr-1" />
+                          Archive
                         </Button>
                         <Button
                           size="sm"
@@ -265,7 +296,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
             <DialogTitle>Add Class</DialogTitle>
             <DialogDescription>This will appear in your class selection menu.</DialogDescription>
           </DialogHeader>
-          <ClassForm form={form} setForm={setForm} />
+          <ClassForm form={form} setForm={setForm} schools={schools} />
           <DialogFooter>
             <Button variant="outline" onClick={closeDialogs}>Cancel</Button>
             <Button
@@ -286,7 +317,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
           <DialogHeader>
             <DialogTitle>Edit Class</DialogTitle>
           </DialogHeader>
-          <ClassForm form={form} setForm={setForm} />
+          <ClassForm form={form} setForm={setForm} schools={schools} />
           <DialogFooter>
             <Button variant="outline" onClick={closeDialogs}>Cancel</Button>
             <Button
@@ -307,9 +338,11 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
 function ClassForm({
   form,
   setForm,
+  schools,
 }: {
   form: typeof emptyForm;
   setForm: React.Dispatch<React.SetStateAction<typeof emptyForm>>;
+  schools: School[];
 }) {
   return (
     <div className="space-y-4 py-2">
@@ -345,6 +378,21 @@ function ClassForm({
           placeholder="e.g. Mon, Wed, Fri 9:00-10:30"
         />
       </div>
+      {schools.length > 0 && (
+        <div className="space-y-1">
+          <Label>School</Label>
+          <select
+            value={form.schoolId}
+            onChange={(e) => setForm(f => ({ ...f, schoolId: e.target.value }))}
+            className="w-full h-10 px-3 rounded-md border border-input bg-transparent text-sm"
+          >
+            <option value="">No specific school</option>
+            {schools.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 }

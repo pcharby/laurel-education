@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Student } from '../lib/types';
-import { saveStudent, getStudents } from '../lib/storage';
+import { useState, useEffect } from 'react';
+import { Student, School } from '../lib/types';
+import { saveStudent, getStudents, getSchools } from '../lib/storage';
 import {
   Dialog,
   DialogContent,
@@ -19,12 +19,19 @@ interface AddStudentDialogProps {
   onClose: () => void;
   onSuccess: () => void;
   defaultGrade?: string;
+  defaultSchoolId?: string;
 }
 
-export function AddStudentDialog({ open, onClose, onSuccess, defaultGrade }: AddStudentDialogProps) {
+export function AddStudentDialog({ open, onClose, onSuccess, defaultGrade, defaultSchoolId }: AddStudentDialogProps) {
   const [name, setName] = useState('');
   const [grade, setGrade] = useState(defaultGrade ?? '');
+  const [schoolId, setSchoolId] = useState(defaultSchoolId ?? '');
+  const [schools, setSchools] = useState<School[]>([]);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    getSchools().then(setSchools);
+  }, []);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -49,6 +56,7 @@ export function AddStudentDialog({ open, onClose, onSuccess, defaultGrade }: Add
       id: `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: name.trim(),
       grade: grade.trim(),
+      ...(schoolId && { schoolId }),
       createdAt: new Date().toISOString(),
     };
 
@@ -90,6 +98,23 @@ export function AddStudentDialog({ open, onClose, onSuccess, defaultGrade }: Add
               placeholder="e.g., 5, 10, K"
            />
           </div>
+
+          {schools.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="school">School</Label>
+              <select
+                id="school"
+                value={schoolId}
+                onChange={(e) => setSchoolId(e.target.value)}
+                className="w-full h-10 px-3 rounded-md border border-input bg-transparent text-sm"
+              >
+                <option value="">No specific school</option>
+                {schools.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {error && (
             <Alert >

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Rubric, SchoolClass } from '../lib/types';
-import { getClasses, getRubrics, addRubric, deleteRubric } from '../lib/storage';
+import { Rubric, Strand, SchoolClass } from '../lib/types';
+import { getClasses, getRubrics, addRubric, deleteRubric, getStrands, addStrand, deleteStrand } from '../lib/storage';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -25,6 +25,97 @@ const DEMO_RUBRICS: Record<string, string[]> = {
   Science: ['Scientific Inquiry', 'Critical Thinking', 'Observation Skills'],
   'Language Arts': ['Reading Comprehension', 'Written Expression', 'Oral Communication'],
 };
+const DEMO_STRANDS: Record<string, string[]> = {
+  Mathematics: ['Number', 'Algebra', 'Data', 'Spatial Sense'],
+  Science: ['Life Systems', 'Structures and Mechanisms', 'Matter and Energy'],
+  'Language Arts': ['Reading', 'Writing', 'Oral Communication'],
+};
+
+interface LabeledItem {
+  id: string;
+  label: string;
+}
+
+// Shared UI for both Rubrics and Strands below - same shape ({id, label}),
+// same add/remove flow, only the copy and backing collection differ.
+interface EditableLabelCardProps {
+  title: string;
+  addLabel: string;
+  placeholder: string;
+  countLabel: string;
+  items: (LabeledItem | string)[];
+  loading: boolean;
+  newValue: string;
+  onNewValueChange: (value: string) => void;
+  onAdd: () => void;
+  onRemove: (item: LabeledItem | string) => void;
+  adding: boolean;
+}
+
+function EditableLabelCard({
+  title,
+  addLabel,
+  placeholder,
+  countLabel,
+  items,
+  loading,
+  newValue,
+  onNewValueChange,
+  onAdd,
+  onRemove,
+  adding,
+}: EditableLabelCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>{addLabel}</Label>
+          <div className="flex gap-2">
+            <Input
+              value={newValue}
+              onChange={(e) => onNewValueChange(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && onAdd()}
+              placeholder={placeholder}
+              className="flex-1"
+              disabled={adding}
+            />
+            <Button onClick={onAdd} disabled={adding || !newValue.trim()} className="gap-2" style={{ backgroundColor: '#6B5FE4' }}>
+              {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              Add
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>{countLabel} ({items.length})</Label>
+          <div className="flex flex-wrap gap-2 min-h-[100px] border-2 rounded-lg p-3 bg-gray-50">
+            {loading ? (
+              <div className="w-full flex justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-[#6B5FE4]" />
+              </div>
+            ) : (
+              items.map(item => {
+                const label = typeof item === 'string' ? item : item.label;
+                const key = typeof item === 'string' ? item : item.id;
+                return (
+                  <Badge key={key} className="gap-2 py-2 px-3 text-sm">
+                    {label}
+                    <button onClick={() => onRemove(item)} className="hover:text-red-600">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
   const { schoolName, badgeLetter } = useSchoolName();
@@ -37,7 +128,12 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
   const [rubrics, setRubrics] = useState<Rubric[]>([]);
   const [rubricsLoading, setRubricsLoading] = useState(false);
   const [newRubric, setNewRubric] = useState('');
-  const [adding, setAdding] = useState(false);
+  const [addingRubric, setAddingRubric] = useState(false);
+
+  const [strands, setStrands] = useState<Strand[]>([]);
+  const [strandsLoading, setStrandsLoading] = useState(false);
+  const [newStrand, setNewStrand] = useState('');
+  const [addingStrand, setAddingStrand] = useState(false);
 
   useEffect(() => {
     if (isDemo) return;
@@ -58,8 +154,18 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
     });
   };
 
+  const loadStrands = () => {
+    if (isDemo || !selectedSubject) return;
+    setStrandsLoading(true);
+    getStrands(selectedSubject).then(result => {
+      setStrands(result);
+      setStrandsLoading(false);
+    });
+  };
+
   useEffect(() => {
     loadRubrics();
+    loadStrands();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSubject, isDemo]);
 
@@ -73,7 +179,7 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
       return;
     }
 
-    setAdding(true);
+    setAddingRubric(true);
     try {
       await addRubric(selectedSubject, label);
       setNewRubric('');
@@ -81,11 +187,11 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
     } catch {
       toast.error('Could not add this rubric. Please try again.');
     } finally {
-      setAdding(false);
+      setAddingRubric(false);
     }
   };
 
-  const handleRemoveRubric = async (rubric: Rubric | string) => {
+  const handleRemoveRubric = async (rubric: LabeledItem | string) => {
     if (isDemo && typeof rubric === 'string') {
       DEMO_RUBRICS[selectedSubject] = (DEMO_RUBRICS[selectedSubject] ?? []).filter(r => r !== rubric);
       setSubjects([...subjects]); // force re-render
@@ -100,9 +206,49 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
     }
   };
 
+  const handleAddStrand = async () => {
+    const label = newStrand.trim();
+    if (!label || !selectedSubject) return;
+
+    if (isDemo) {
+      DEMO_STRANDS[selectedSubject] = [...(DEMO_STRANDS[selectedSubject] ?? []), label];
+      setNewStrand('');
+      return;
+    }
+
+    setAddingStrand(true);
+    try {
+      await addStrand(selectedSubject, label);
+      setNewStrand('');
+      loadStrands();
+    } catch {
+      toast.error('Could not add this strand. Please try again.');
+    } finally {
+      setAddingStrand(false);
+    }
+  };
+
+  const handleRemoveStrand = async (strand: LabeledItem | string) => {
+    if (isDemo && typeof strand === 'string') {
+      DEMO_STRANDS[selectedSubject] = (DEMO_STRANDS[selectedSubject] ?? []).filter(s => s !== strand);
+      setSubjects([...subjects]); // force re-render
+      return;
+    }
+    if (typeof strand === 'string') return;
+    try {
+      await deleteStrand(strand.id);
+      loadStrands();
+    } catch {
+      toast.error('Could not remove this strand. Please try again.');
+    }
+  };
+
   const displayRubrics: (Rubric | string)[] = isDemo
     ? (DEMO_RUBRICS[selectedSubject] ?? [])
     : rubrics;
+  const displayStrands: (Strand | string)[] = isDemo
+    ? (DEMO_STRANDS[selectedSubject] ?? [])
+    : strands;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex flex-col" style={{ backgroundColor: 'rgba(91, 155, 213, 0.08)' }}>
@@ -121,8 +267,8 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
             <div className="text-xs text-gray-700">{schoolName}</div>
           </div>
         </div>
-        <h2 className="text-xl font-semibold text-gray-800">Custom Rubrics</h2>
-        <p className="text-sm text-gray-600">Manage assessment criteria for each subject you teach</p>
+        <h2 className="text-xl font-semibold text-gray-800">Custom Rubrics &amp; Strands</h2>
+        <p className="text-sm text-gray-600">Manage assessment criteria and curriculum strands for each subject you teach</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -133,7 +279,7 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
         ) : subjects.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              Add a class in Classes & Subjects first - rubrics are organized by the subjects you teach.
+              Add a class in Classes & Subjects first - rubrics and strands are organized by the subjects you teach.
             </CardContent>
           </Card>
         ) : (
@@ -150,62 +296,40 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
               ))}
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{selectedSubject} Rubrics</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="new-rubric">Add New Rubric</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="new-rubric"
-                      value={newRubric}
-                      onChange={(e) => setNewRubric(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddRubric()}
-                      placeholder="e.g., Creative Problem Solving"
-                      className="flex-1"
-                      disabled={adding}
-                   />
-                    <Button onClick={handleAddRubric} disabled={adding || !newRubric.trim()} className="gap-2" style={{ backgroundColor: '#6B5FE4' }}>
-                      {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                      Add
-                    </Button>
-                  </div>
-                </div>
+            <EditableLabelCard
+              title={`${selectedSubject} Curriculum Strands`}
+              addLabel="Add New Strand"
+              placeholder="e.g., Number Sense"
+              countLabel="Current Strands"
+              items={displayStrands}
+              loading={strandsLoading}
+              newValue={newStrand}
+              onNewValueChange={setNewStrand}
+              onAdd={handleAddStrand}
+              onRemove={handleRemoveStrand}
+              adding={addingStrand}
+            />
 
-                <div className="space-y-2">
-                  <Label>Current Rubrics ({displayRubrics.length})</Label>
-                  <div className="flex flex-wrap gap-2 min-h-[100px] border-2 rounded-lg p-3 bg-gray-50">
-                    {rubricsLoading ? (
-                      <div className="w-full flex justify-center py-4">
-                        <Loader2 className="w-5 h-5 animate-spin text-[#6B5FE4]" />
-                      </div>
-                    ) : (
-                      displayRubrics.map(rubric => {
-                        const label = typeof rubric === 'string' ? rubric : rubric.label;
-                        const key = typeof rubric === 'string' ? rubric : rubric.id;
-                        return (
-                          <Badge key={key} className="gap-2 py-2 px-3 text-sm">
-                            {label}
-                            <button onClick={() => handleRemoveRubric(rubric)} className="hover:text-red-600">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </Badge>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <EditableLabelCard
+              title={`${selectedSubject} Rubrics`}
+              addLabel="Add New Rubric"
+              placeholder="e.g., Creative Problem Solving"
+              countLabel="Current Rubrics"
+              items={displayRubrics}
+              loading={rubricsLoading}
+              newValue={newRubric}
+              onNewValueChange={setNewRubric}
+              onAdd={handleAddRubric}
+              onRemove={handleRemoveRubric}
+              adding={addingRubric}
+            />
           </>
         )}
 
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4">
             <p className="text-sm text-gray-700">
-              <strong>Tip:</strong> Align your custom rubrics with your curriculum expectations and lesson plans. These will be available when recording observations.
+              <strong>Tip:</strong> Align your curriculum strands and rubrics with your curriculum expectations and lesson plans. These will be available when recording observations.
             </p>
           </CardContent>
         </Card>

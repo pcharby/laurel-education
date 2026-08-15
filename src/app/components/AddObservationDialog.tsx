@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Observation } from '../lib/types';
-import { saveObservation, getRubrics } from '../lib/storage';
+import { saveObservation, getRubrics, getStrands } from '../lib/storage';
 import { auth } from '../../firebase';
 import { LaurelLogo } from './LaurelLogo';
 import {
@@ -76,6 +76,19 @@ const getRubricsForSubject = (subject: string) => {
   }
 };
 
+const getStrandsForSubject = (subject: string) => {
+  switch (subject) {
+    case 'Mathematics':
+      return ['Number', 'Algebra', 'Data', 'Spatial Sense', 'Financial Literacy'];
+    case 'Science':
+      return ['Life Systems', 'Structures and Mechanisms', 'Matter and Energy', 'Earth and Space Systems'];
+    case 'Language Arts':
+      return ['Reading', 'Writing', 'Oral Communication', 'Media Literacy'];
+    default:
+      return [];
+  }
+};
+
 export function AddObservationDialog({
   open,
   onClose,
@@ -93,18 +106,20 @@ export function AddObservationDialog({
   const [tagInput, setTagInput] = useState('');
   const [performanceLevel, setPerformanceLevel] = useState<PerformanceLevel | ''>('');
   const [selectedStrand, setSelectedStrand] = useState<string>('');
-  const [selectedObjective, setSelectedObjective] = useState<string>('');
 
-  // Demo accounts see the same fixed sample rubric set used elsewhere
-  // (CustomRubricsConfig's DEMO_RUBRICS) - real accounts get whatever the
-  // teacher has actually configured in Settings > Custom Rubrics for this
-  // subject, not a generic hardcoded list.
+  // Demo accounts see the same fixed sample rubric/strand sets used elsewhere
+  // (CustomRubricsConfig's DEMO_RUBRICS/DEMO_STRANDS) - real accounts get
+  // whatever the teacher has actually configured in Settings > Custom
+  // Rubrics & Strands for this subject, not a generic hardcoded list.
   const [rubrics, setRubrics] = useState<string[]>(isDemo ? getRubricsForSubject(subject) : []);
   const [rubricsLoading, setRubricsLoading] = useState(!isDemo);
+  const [strands, setStrands] = useState<string[]>(isDemo ? getStrandsForSubject(subject) : []);
+  const [strandsLoading, setStrandsLoading] = useState(!isDemo);
 
   useEffect(() => {
     if (isDemo || !subject) {
       setRubricsLoading(false);
+      setStrandsLoading(false);
       return;
     }
     setRubricsLoading(true);
@@ -112,35 +127,13 @@ export function AddObservationDialog({
       setRubrics(result.map(r => r.label));
       setRubricsLoading(false);
     });
+    setStrandsLoading(true);
+    getStrands(subject).then(result => {
+      setStrands(result.map(s => s.label));
+      setStrandsLoading(false);
+    });
   }, [subject, isDemo]);
 
-  // Grade 5 Curriculum Strands
-  const strands = {
-    'Mathematics': [
-      { name: 'Number', objectives: ['Place Value', 'Operations', 'Fractions', 'Decimals'] },
-      { name: 'Algebra', objectives: ['Patterns & Relationships', 'Equations & Inequalities', 'Coding'] },
-      { name: 'Data', objectives: ['Data Collection', 'Data Visualization', 'Data Analysis'] },
-      { name: 'Spatial Sense', objectives: ['Geometric Properties', 'Location & Movement', 'Measurement'] },
-      { name: 'Financial Literacy', objectives: ['Money Concepts', 'Consumer Awareness', 'Financial Planning'] },
-    ],
-    'Science': [
-      { name: 'Life Systems', objectives: ['Human Organ Systems', 'Body Functions', 'Health & Well-being'] },
-      { name: 'Structures and Mechanisms', objectives: ['Forces Acting on Structures', 'Structural Design', 'Engineering'] },
-      { name: 'Matter and Energy', objectives: ['Properties of Matter', 'Changes in Matter', 'Energy Conservation'] },
-      { name: 'Earth and Space Systems', objectives: ['Conservation of Energy', 'Renewable Resources', 'Environmental Impact'] },
-    ],
-    'Language Arts': [
-      { name: 'Reading', objectives: ['Comprehension Strategies', 'Literary Elements', 'Critical Analysis'] },
-      { name: 'Writing', objectives: ['Text Forms', 'Writing Process', 'Grammar & Mechanics'] },
-      { name: 'Oral Communication', objectives: ['Active Listening', 'Speaking Skills', 'Presentation'] },
-      { name: 'Media Literacy', objectives: ['Media Forms', 'Digital Citizenship', 'Critical Media Analysis'] },
-    ],
-  };
-
-  const currentStrands = strands[subject as keyof typeof strands] || [];
-  const currentObjectives = selectedStrand
-    ? currentStrands.find(s => s.name === selectedStrand)?.objectives || []
-    : [];
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -274,7 +267,7 @@ export function AddObservationDialog({
       type,
       content: content.trim(),
       timestamp: new Date().toISOString(),
-      tags: [...selectedRubrics, ...tags],
+      tags: [...selectedRubrics, ...(selectedStrand ? [selectedStrand] : []), ...tags],
       subject: subject || undefined,
     };
 
@@ -306,6 +299,7 @@ export function AddObservationDialog({
     // Reset form
     setContent('');
     setSelectedRubrics([]);
+    setSelectedStrand('');
     setTags([]);
     setTagInput('');
     setImageFile(null);
@@ -496,40 +490,29 @@ export function AddObservationDialog({
         <div className="space-y-4 mt-6">
           <div className="space-y-2">
             <Label className="text-base font-semibold">Curriculum Strand</Label>
-            <select
-              value={selectedStrand}
-              onChange={(e) => {
-                setSelectedStrand(e.target.value);
-                setSelectedObjective('');
-              }}
-              className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white"
-            >
-              <option value="">Select Strand...</option>
-              {currentStrands.map((strand) => (
-                <option key={strand.name} value={strand.name}>
-                  {strand.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {selectedStrand && (
-            <div className="space-y-2">
-              <Label className="text-base font-semibold">Learning Objective</Label>
+            {strandsLoading ? (
+              <div className="w-full flex justify-center py-2">
+                <Loader2 className="w-4 h-4 animate-spin text-[#6B5FE4]" />
+              </div>
+            ) : strands.length === 0 ? (
+              <p className="text-sm text-gray-500 py-1">
+                No strands set up for {subject || 'this subject'} yet - add some in Settings &gt; Custom Rubrics &amp; Strands.
+              </p>
+            ) : (
               <select
-                value={selectedObjective}
-                onChange={(e) => setSelectedObjective(e.target.value)}
+                value={selectedStrand}
+                onChange={(e) => setSelectedStrand(e.target.value)}
                 className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white"
               >
-                <option value="">Select Learning Objective...</option>
-                {currentObjectives.map((objective) => (
-                  <option key={objective} value={objective}>
-                    {objective}
+                <option value="">Select Strand...</option>
+                {strands.map((strand) => (
+                  <option key={strand} value={strand}>
+                    {strand}
                   </option>
                 ))}
               </select>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="space-y-2">
             <Label className="text-base font-semibold">Performance Level</Label>
@@ -572,7 +555,7 @@ export function AddObservationDialog({
                 </div>
               ) : rubrics.length === 0 ? (
                 <p className="text-sm text-gray-500 py-1">
-                  No rubrics set up for {subject || 'this subject'} yet - add some in Settings &gt; Custom Rubrics.
+                  No rubrics set up for {subject || 'this subject'} yet - add some in Settings &gt; Custom Rubrics &amp; Strands.
                 </p>
               ) : (
                 rubrics.map((rubric) => (

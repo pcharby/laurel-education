@@ -8,6 +8,8 @@ export interface Student {
   studentCode?: string;
   name: string;
   grade: string;
+  /** Which of the teacher's Schools this student belongs to - see School. Absent for teachers who never set up multiple schools. */
+  schoolId?: string;
   createdAt: string;
   /**
    * Stamped by the schoolYearLockdownSweep Cloud Function only, never by the
@@ -28,6 +30,8 @@ export interface SchoolClass {
   /** Optional section/group label, e.g. "A" or "Advanced Group" - distinct from grade. */
   name?: string;
   schedule?: string;
+  /** Which of the teacher's Schools this class belongs to - see School. Absent for teachers who never set up multiple schools. */
+  schoolId?: string;
   createdAt: string;
   /** Stamped by schoolYearLockdownSweep only - see Student.schoolYearEndDate. */
   schoolYearEndDate?: Timestamp;
@@ -79,7 +83,31 @@ export interface Rubric {
   createdAt: string;
 }
 
+// Teacher-editable curriculum strands, shown in the "Curriculum Strand"
+// picker when recording an observation. Same shape/ownership as Rubric.
+export interface Strand {
+  id: string;
+  teacherId: string;
+  subject: string;
+  label: string;
+  createdAt: string;
+}
+
+// An itinerant/multi-school teacher's separate schools - a lightweight
+// sub-structure so classes and student rosters (SchoolClass.schoolId /
+// Student.schoolId) can be kept apart per school, instead of the single
+// TeacherProfile.schoolName shown in the header. Teachers who work at one
+// school never create any of these, and nothing else in the app changes.
+export interface School {
+  id: string;
+  teacherId: string;
+  name: string;
+  createdAt: string;
+}
+
 export interface TeacherProfile {
+  /** Shown in greetings (e.g. "Welcome, Sarah!") instead of the account's raw email. */
+  displayName?: string;
   jurisdiction?: string;
   schoolName?: string;
   /**

@@ -52,6 +52,15 @@ service cloud.firestore {
         && request.time > get(profilePath).data.schoolYearEndDate + duration.value(2, 'd');
     }
 
+    // Schools: which of a teacher's schools a class/student belongs to.
+    // Structural, not annual classroom content, so unlike classes/students/
+    // rubrics/strands it's never gated by isTeacherLocked() - same reasoning
+    // as teacherProfiles staying writable through a lockdown.
+    match /schools/{schoolId} {
+      allow read, update, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+    }
+
     match /classes/{classId} {
       allow read, delete: if ownsExisting();
       allow update: if ownsExisting() && !isTeacherLocked();
@@ -59,6 +68,12 @@ service cloud.firestore {
     }
 
     match /rubrics/{rubricId} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming() && !isTeacherLocked();
+      allow update: if false;
+    }
+
+    match /strands/{strandId} {
       allow read, delete: if ownsExisting();
       allow create: if ownsIncoming() && !isTeacherLocked();
       allow update: if false;

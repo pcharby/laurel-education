@@ -325,10 +325,10 @@ export function CurriculumConfig({ onBack, onCustomRubrics }: CurriculumConfigPr
         <Card className="bg-accent/40 border-accent">
           <CardContent className="p-4 flex items-center justify-between gap-3">
             <p className="text-sm text-foreground">
-              Rubrics and learning objectives are configured separately, per subject.
+              Rubrics and curriculum strands are configured separately, per subject.
             </p>
             <Button onClick={onCustomRubrics} variant="outline" className="shrink-0 border-2 border-[#7D9D77] hover:bg-[#7D9D77]/10">
-              Configure Rubrics
+              Configure Rubrics & Strands
             </Button>
           </CardContent>
         </Card>

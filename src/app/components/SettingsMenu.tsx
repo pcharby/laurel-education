@@ -1,6 +1,6 @@
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Lock, BookOpen, Calendar, Bug, School } from 'lucide-react';
+import { ArrowLeft, Lock, BookOpen, Calendar, Bug, School, Building2 } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 import { useSchoolName } from '../lib/useSchoolName';
 
@@ -11,9 +11,10 @@ interface SettingsMenuProps {
   onPasswordManagement: () => void;
   onReportProblem: () => void;
   onSchoolProfile: () => void;
+  onSchools: () => void;
 }
 
-export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPasswordManagement, onReportProblem, onSchoolProfile }: SettingsMenuProps) {
+export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPasswordManagement, onReportProblem, onSchoolProfile, onSchools }: SettingsMenuProps) {
   const { schoolName, badgeLetter } = useSchoolName();
   const settingsOptions = [
     {
@@ -22,6 +23,13 @@ export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPas
       description: 'Set your school name, shown throughout the app',
       color: '#4B5E7A',
       onClick: onSchoolProfile,
+    },
+    {
+      icon: Building2,
+      title: 'Schools',
+      description: 'Teach at more than one school? Keep classes and student lists separate per school',
+      color: '#4B5E7A',
+      onClick: onSchools,
     },
     {
       icon: BookOpen,
