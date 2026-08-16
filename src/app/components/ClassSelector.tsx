@@ -60,7 +60,7 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
   const [schools, setSchools] = useState<School[]>([]);
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
   const isDemo = auth.currentUser?.isAnonymous ?? false;
-  const { schoolName, badgeLetter } = useSchoolName();
+  const { schoolName, badgeLetter, hasSchoolName } = useSchoolName();
   const lockInfo = useSchoolYearLock();
   const displayName = useTeacherDisplayName();
 
@@ -86,10 +86,16 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
   // Once a specific school is selected, the header should say which one -
   // otherwise it's stuck on the teacher-profile name no matter which
   // school's classes are actually on screen. Falls back to the profile name
-  // for "All Schools" or the common single-school case.
+  // for "All Schools" or the common single-school case - except a
+  // multi-school teacher who's never bothered personalizing that profile
+  // field has real school names one tap away already, so "All Schools" beats
+  // showing them a generic placeholder that implies there's only one.
   const selectedSchool = schools.length > 1 ? schools.find(s => s.id === selectedSchoolId) : undefined;
-  const headerName = selectedSchool?.name ?? schoolName;
-  const headerBadge = selectedSchool ? badgeLetterFor(selectedSchool.name) : badgeLetter;
+  const showingAllSchools = schools.length > 1 && !selectedSchool && !hasSchoolName;
+  const headerName = selectedSchool?.name ?? (showingAllSchools ? 'All Schools' : schoolName);
+  const headerBadge = selectedSchool
+    ? badgeLetterFor(selectedSchool.name)
+    : showingAllSchools ? badgeLetterFor('All Schools') : badgeLetter;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F7F5FC] to-[#EBE8F5] flex flex-col p-4">
