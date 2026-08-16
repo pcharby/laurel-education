@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Rubric, Strand, SchoolClass } from '../lib/types';
-import { getClasses, getRubrics, addRubric, deleteRubric, getStrands, addStrand, deleteStrand } from '../lib/storage';
+import { Rubric, Strand, SchoolClass, School } from '../lib/types';
+import { getClasses, getSchools, getRubrics, addRubric, deleteRubric, getStrands, addStrand, deleteStrand } from '../lib/storage';
+import { matchesScope } from '../lib/curriculumScope';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -117,13 +118,26 @@ function EditableLabelCard({
   );
 }
 
+// A (grade, school) combination a subject is actually taught under. Most
+// subjects have exactly one - a Grade 3 generalist's "Mathematics" is only
+// ever Grade 3 at her one school - so the combo picker only renders when a
+// subject spans more than one, keeping this invisible for the common case.
+interface SubjectCombo {
+  grade: string;
+  schoolId?: string;
+  label: string;
+}
+
 export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
   const { schoolName, badgeLetter } = useSchoolName();
   const isDemo = auth.currentUser?.isAnonymous ?? false;
 
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
   const [subjects, setSubjects] = useState<string[]>(isDemo ? DEMO_SUBJECTS : []);
   const [subjectsLoading, setSubjectsLoading] = useState(!isDemo);
   const [selectedSubject, setSelectedSubject] = useState<string>(isDemo ? DEMO_SUBJECTS[0] : '');
+  const [selectedCombo, setSelectedCombo] = useState<SubjectCombo | null>(null);
 
   const [rubrics, setRubrics] = useState<Rubric[]>([]);
   const [rubricsLoading, setRubricsLoading] = useState(false);
@@ -137,28 +151,53 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
 
   useEffect(() => {
     if (isDemo) return;
-    getClasses().then((classes: SchoolClass[]) => {
-      const distinct = Array.from(new Set(classes.filter(c => !c.archived).map(c => c.subject)));
+    Promise.all([getClasses(), getSchools()]).then(([allClasses, allSchools]) => {
+      const active = allClasses.filter(c => !c.archived);
+      setClasses(active);
+      setSchools(allSchools);
+      const distinct = Array.from(new Set(active.map(c => c.subject)));
       setSubjects(distinct);
       if (distinct.length > 0) setSelectedSubject(distinct[0]);
       setSubjectsLoading(false);
     });
   }, [isDemo]);
 
+  // Distinct (grade, school) combos this subject is actually taught under,
+  // derived from the teacher's own classes - not asked for separately.
+  const combos: SubjectCombo[] = isDemo
+    ? [{ grade: '5', label: 'Grade 5' }]
+    : Array.from(
+        new Map(
+          classes
+            .filter(c => c.subject === selectedSubject)
+            .map(c => {
+              const key = `${c.grade}::${c.schoolId ?? ''}`;
+              const schoolLabel = c.schoolId ? schools.find(s => s.id === c.schoolId)?.name : undefined;
+              const label = schoolLabel ? `${schoolLabel} — Grade ${c.grade}` : `Grade ${c.grade}`;
+              return [key, { grade: c.grade, schoolId: c.schoolId, label }] as const;
+            })
+        ).values()
+      );
+
+  useEffect(() => {
+    setSelectedCombo(combos.length > 0 ? combos[0] : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSubject, classes, schools]);
+
   const loadRubrics = () => {
-    if (isDemo || !selectedSubject) return;
+    if (isDemo || !selectedSubject || !selectedCombo) return;
     setRubricsLoading(true);
     getRubrics(selectedSubject).then(result => {
-      setRubrics(result);
+      setRubrics(result.filter(r => matchesScope(r, selectedCombo.grade, selectedCombo.schoolId)));
       setRubricsLoading(false);
     });
   };
 
   const loadStrands = () => {
-    if (isDemo || !selectedSubject) return;
+    if (isDemo || !selectedSubject || !selectedCombo) return;
     setStrandsLoading(true);
     getStrands(selectedSubject).then(result => {
-      setStrands(result);
+      setStrands(result.filter(s => matchesScope(s, selectedCombo.grade, selectedCombo.schoolId)));
       setStrandsLoading(false);
     });
   };
@@ -167,7 +206,7 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
     loadRubrics();
     loadStrands();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSubject, isDemo]);
+  }, [selectedSubject, selectedCombo, isDemo]);
 
   const handleAddRubric = async () => {
     const label = newRubric.trim();
@@ -181,7 +220,7 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
 
     setAddingRubric(true);
     try {
-      await addRubric(selectedSubject, label);
+      await addRubric(selectedSubject, label, selectedCombo?.grade, selectedCombo?.schoolId);
       setNewRubric('');
       loadRubrics();
     } catch {
@@ -218,7 +257,7 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
 
     setAddingStrand(true);
     try {
-      await addStrand(selectedSubject, label);
+      await addStrand(selectedSubject, label, selectedCombo?.grade, selectedCombo?.schoolId);
       setNewStrand('');
       loadStrands();
     } catch {
@@ -296,8 +335,28 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
               ))}
             </div>
 
+            {combos.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {combos.map(combo => (
+                  <Button
+                    key={`${combo.grade}::${combo.schoolId ?? ''}`}
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedCombo(combo)}
+                    className={
+                      selectedCombo?.grade === combo.grade && selectedCombo?.schoolId === combo.schoolId
+                        ? 'border-[#6B5FE4] text-[#6B5FE4]'
+                        : ''
+                    }
+                  >
+                    {combo.label}
+                  </Button>
+                ))}
+              </div>
+            )}
+
             <EditableLabelCard
-              title={`${selectedSubject} Curriculum Strands`}
+              title={`${selectedSubject}${combos.length > 1 && selectedCombo ? ` — ${selectedCombo.label}` : ''} Curriculum Strands`}
               addLabel="Add New Strand"
               placeholder="e.g., Number Sense"
               countLabel="Current Strands"
@@ -311,7 +370,7 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
             />
 
             <EditableLabelCard
-              title={`${selectedSubject} Rubrics`}
+              title={`${selectedSubject}${combos.length > 1 && selectedCombo ? ` — ${selectedCombo.label}` : ''} Rubrics`}
               addLabel="Add New Rubric"
               placeholder="e.g., Creative Problem Solving"
               countLabel="Current Rubrics"

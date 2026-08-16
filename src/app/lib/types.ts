@@ -32,6 +32,19 @@ export interface SchoolClass {
   schedule?: string;
   /** Which of the teacher's Schools this class belongs to - see School. Absent for teachers who never set up multiple schools. */
   schoolId?: string;
+  /**
+   * Explicit roster: exactly these Student ids belong to this class, and no
+   * others - set via the "Manage Roster" dialog. Absent (or an empty array)
+   * means this class has no explicit roster yet, and falls back to the
+   * original behavior of matching every non-archived student at this
+   * class's grade (and school, if set). That fallback is what makes this
+   * purely additive: a teacher who never opens "Manage Roster" sees no
+   * change at all. Explicit rosters exist for the case an implicit grade
+   * match can't express - e.g. two different pull-out groups drawn from the
+   * same grade at the same school, which would otherwise show the exact
+   * same students in both.
+   */
+  studentIds?: string[];
   createdAt: string;
   /** Stamped by schoolYearLockdownSweep only - see Student.schoolYearEndDate. */
   schoolYearEndDate?: Timestamp;
@@ -75,20 +88,32 @@ export interface BugReport {
   status: 'new' | 'reviewed' | 'resolved';
 }
 
+// Rubric and Strand share the same optional scoping: `grade`/`schoolId`
+// pin an entry to one specific (subject, grade, school) combination - e.g.
+// a Grade 6 "Simple Machines" strand distinct from a Grade 8 "Cellular
+// Processes" one under the same "Science" subject. Absent means the entry
+// applies everywhere that subject is taught, which is both the default for
+// a teacher who only ever teaches a subject at one grade/school (nothing to
+// scope) and how every entry created before this feature already behaves -
+// so existing data keeps showing up exactly where it always did.
 export interface Rubric {
   id: string;
   teacherId: string;
   subject: string;
+  grade?: string;
+  schoolId?: string;
   label: string;
   createdAt: string;
 }
 
 // Teacher-editable curriculum strands, shown in the "Curriculum Strand"
-// picker when recording an observation. Same shape/ownership as Rubric.
+// picker when recording an observation. Same shape/ownership/scoping as Rubric.
 export interface Strand {
   id: string;
   teacherId: string;
   subject: string;
+  grade?: string;
+  schoolId?: string;
   label: string;
   createdAt: string;
 }

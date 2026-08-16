@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
 import { BookOpen, Users, Calculator, Beaker, BookText, Palette, LogOut, Settings, Plus, Loader2, Lock } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
-import { useSchoolName } from '../lib/useSchoolName';
+import { useSchoolName, badgeLetterFor } from '../lib/useSchoolName';
 import { useSchoolYearLock } from '../lib/useSchoolYearLock';
 import { useTeacherDisplayName } from '../lib/useTeacherDisplayName';
 
@@ -82,6 +82,14 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
     ? classes.filter(c => c.schoolId === selectedSchoolId)
     : classes;
 
+  // Once a specific school is selected, the header should say which one -
+  // otherwise it's stuck on the teacher-profile name no matter which
+  // school's classes are actually on screen. Falls back to the profile name
+  // for "All Schools" or the common single-school case.
+  const selectedSchool = schools.length > 1 ? schools.find(s => s.id === selectedSchoolId) : undefined;
+  const headerName = selectedSchool?.name ?? schoolName;
+  const headerBadge = selectedSchool ? badgeLetterFor(selectedSchool.name) : badgeLetter;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F7F5FC] to-[#EBE8F5] flex flex-col p-4">
       <div className="flex justify-end gap-2 mb-4">
@@ -108,10 +116,10 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
       <div className="text-center pt-2 pb-4">
         <div className="flex items-center justify-center gap-3 mb-4">
           <div className="w-12 h-12 bg-gradient-to-br from-[#6B5FE4] to-[#1A1A40] rounded-full flex items-center justify-center text-white font-bold text-lg">
-            {badgeLetter}
+            {headerBadge}
           </div>
           <div className="text-left">
-            <div className="text-xs text-gray-700">{schoolName}</div>
+            <div className="text-xs text-gray-700">{headerName}</div>
             <LaurelLogo height="md" showProductName />
           </div>
         </div>

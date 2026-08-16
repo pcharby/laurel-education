@@ -17,6 +17,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { httpsCallable } from 'firebase/functions';
 import { getSchoolYearLockStatus } from './schoolYearLock';
 import { compareClasses } from './sortClasses';
+import { compareStudentsByFirstName } from './sortStudents';
 
 const getTeacherId = (): string => {
   const uid = auth.currentUser?.uid;
@@ -35,11 +36,13 @@ const stripUndefined = <T extends object>(obj: T): T =>
 // non-archived roster by default. A few callers deliberately need the full
 // set regardless of archive status (looking up one specific student by ID,
 // or wiping an account entirely), so they go through fetchAllStudents
-// directly instead of the filtered getStudents().
+// directly instead of the filtered getStudents(). Sorted centrally here by
+// first name (same reasoning as compareClasses for getClasses()) so every
+// picker gets a consistent, scannable order automatically.
 const fetchAllStudents = async (): Promise<Student[]> => {
   const q = query(collection(db, 'students'), where('teacherId', '==', getTeacherId()));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(d => ({ ...(d.data() as Student), id: d.id }));
+  return snapshot.docs.map(d => ({ ...(d.data() as Student), id: d.id })).sort(compareStudentsByFirstName);
 };
 
 export const getStudents = async (): Promise<Student[]> => {
@@ -93,6 +96,14 @@ export const deleteClass = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'classes', id));
 };
 
+// A plain updateClass(id, { studentIds: [] }) can't distinguish "explicitly
+// no students" from "never configured" once read back (both are falsy), so
+// resetting a class to automatic grade-matching has to actually remove the
+// field via deleteField() - same reasoning as clearSchoolYearEndDate.
+export const clearClassRoster = async (id: string): Promise<void> => {
+  await updateDoc(doc(db, 'classes', id), { studentIds: deleteField() });
+};
+
 // Schools - a lightweight sub-structure for itinerant/multi-school teachers
 // so classes and student rosters can be scoped per school (SchoolClass.
 // schoolId / Student.schoolId). Not gated by isTeacherLocked(): which
@@ -133,13 +144,15 @@ export const getRubrics = async (subject: string): Promise<Rubric[]> => {
   return snapshot.docs.map(d => ({ ...(d.data() as Rubric), id: d.id }));
 };
 
-export const addRubric = async (subject: string, label: string): Promise<void> => {
-  await addDoc(collection(db, 'rubrics'), {
+export const addRubric = async (subject: string, label: string, grade?: string, schoolId?: string): Promise<void> => {
+  await addDoc(collection(db, 'rubrics'), stripUndefined({
     subject,
+    grade,
+    schoolId,
     label,
     teacherId: getTeacherId(),
     createdAt: new Date().toISOString(),
-  });
+  }));
 };
 
 export const deleteRubric = async (id: string): Promise<void> => {
@@ -158,13 +171,15 @@ export const getStrands = async (subject: string): Promise<Strand[]> => {
   return snapshot.docs.map(d => ({ ...(d.data() as Strand), id: d.id }));
 };
 
-export const addStrand = async (subject: string, label: string): Promise<void> => {
-  await addDoc(collection(db, 'strands'), {
+export const addStrand = async (subject: string, label: string, grade?: string, schoolId?: string): Promise<void> => {
+  await addDoc(collection(db, 'strands'), stripUndefined({
     subject,
+    grade,
+    schoolId,
     label,
     teacherId: getTeacherId(),
     createdAt: new Date().toISOString(),
-  });
+  }));
 };
 
 export const deleteStrand = async (id: string): Promise<void> => {

@@ -364,6 +364,8 @@ export default function App() {
           studentId={selectedStudent.id}
           initialType={selectedType}
           subject={selectedClass.subject}
+          grade={selectedClass.grade}
+          schoolId={selectedClass.schoolId}
         />
       )}
 

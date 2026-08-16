@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Observation } from '../lib/types';
 import { saveObservation, getRubrics, getStrands } from '../lib/storage';
+import { matchesScope } from '../lib/curriculumScope';
 import { auth } from '../../firebase';
 import { LaurelLogo } from './LaurelLogo';
 import {
@@ -30,6 +31,9 @@ interface AddObservationDialogProps {
   studentId: string;
   initialType?: 'text' | 'audio' | 'image';
   subject?: string;
+  /** Scopes which strands/rubrics show up - see curriculumScope.ts. */
+  grade?: string;
+  schoolId?: string;
 }
 
 type PerformanceLevel = 'needs-support' | 'still-learning' | 'meets-expectations' | 'exceeds-expectations';
@@ -96,6 +100,8 @@ export function AddObservationDialog({
   studentId,
   initialType = 'text',
   subject = '',
+  grade = '',
+  schoolId,
 }: AddObservationDialogProps) {
   const { schoolName } = useSchoolName();
   const isDemo = auth.currentUser?.isAnonymous ?? false;
@@ -124,15 +130,15 @@ export function AddObservationDialog({
     }
     setRubricsLoading(true);
     getRubrics(subject).then(result => {
-      setRubrics(result.map(r => r.label));
+      setRubrics(result.filter(r => matchesScope(r, grade, schoolId)).map(r => r.label));
       setRubricsLoading(false);
     });
     setStrandsLoading(true);
     getStrands(subject).then(result => {
-      setStrands(result.map(s => s.label));
+      setStrands(result.filter(s => matchesScope(s, grade, schoolId)).map(s => s.label));
       setStrandsLoading(false);
     });
-  }, [subject, isDemo]);
+  }, [subject, grade, schoolId, isDemo]);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [error, setError] = useState('');

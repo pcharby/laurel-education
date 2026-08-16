@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { ArrowLeft, Search, UserCircle, UserPlus, Upload, Lock, Archive, ChevronDown, ChevronUp } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
+import { compareStudentsByFirstName } from '../lib/sortStudents';
 import { AddStudentDialog } from './AddStudentDialog';
 import { BulkImportStudentsDialog } from './BulkImportStudentsDialog';
 import { useSchoolYearLock } from '../lib/useSchoolYearLock';
@@ -62,9 +63,10 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
   const bySchool = (student: Student) =>
     schools.length <= 1 || selectedSchoolId === 'all' || student.schoolId === selectedSchoolId;
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchQuery.toLowerCase()) && bySchool(student)
-  );
+  const filteredStudents = students
+    .filter(student => student.name.toLowerCase().includes(searchQuery.toLowerCase()) && bySchool(student))
+    .sort(compareStudentsByFirstName);
+  const sortedArchivedStudents = [...archivedStudents].sort(compareStudentsByFirstName);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex flex-col" style={{ backgroundColor: 'rgba(91, 155, 213, 0.08)' }}>
@@ -196,7 +198,7 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
             </CardHeader>
             {showArchived && (
               <CardContent className="space-y-2">
-                {archivedStudents.map(student => (
+                {sortedArchivedStudents.map(student => (
                   <Button
                     key={student.id}
                     onClick={() => onSelectStudent(student)}

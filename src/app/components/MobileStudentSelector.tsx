@@ -7,6 +7,7 @@ import { Input } from './ui/input';
 import { ArrowLeft, Search, UserCircle, UserPlus } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
+import { compareStudentsByFirstName } from '../lib/sortStudents';
 import { AddStudentDialog } from './AddStudentDialog';
 
 interface MobileStudentSelectorProps {
@@ -27,12 +28,18 @@ export function MobileStudentSelector({
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  // A class tagged with a school only shows students tagged with that same
-  // school - keeps two schools' Grade 5 rosters from bleeding together for
-  // an itinerant teacher. A class with no school (the common single-school
-  // case) keeps the old grade-only behavior, unaffected.
+  // A class with an explicit roster (see "Manage Roster" in Classes &
+  // Subjects) shows exactly those students, full stop - this is what lets
+  // two different pull-out groups at the same grade stay separate instead
+  // of both showing every student at that grade. Without one, falls back to
+  // the original implicit match: same grade, and same school if the class
+  // has one (keeps two schools' same-grade rosters from bleeding together
+  // for an itinerant teacher). A class with no school and no explicit
+  // roster keeps the very first grade-only behavior, unaffected.
   const matchesClass = (s: Student) =>
-    s.grade === classInfo.grade && (!classInfo.schoolId || s.schoolId === classInfo.schoolId);
+    classInfo.studentIds && classInfo.studentIds.length > 0
+      ? classInfo.studentIds.includes(s.id)
+      : s.grade === classInfo.grade && (!classInfo.schoolId || s.schoolId === classInfo.schoolId);
 
   const loadStudents = () => {
     getStudents().then(stored => {
@@ -62,11 +69,11 @@ export function MobileStudentSelector({
   useEffect(() => {
     loadStudents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classInfo.grade, classInfo.schoolId]);
+  }, [classInfo.grade, classInfo.schoolId, classInfo.studentIds]);
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStudents = students
+    .filter(student => student.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort(compareStudentsByFirstName);
 
   const getTypeColor = () => {
     switch (observationType) {
