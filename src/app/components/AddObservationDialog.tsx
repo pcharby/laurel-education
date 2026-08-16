@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Observation } from '../lib/types';
+import { Observation, PerformanceLevel } from '../lib/types';
 import { saveObservation, getRubrics, getStrands } from '../lib/storage';
 import { matchesScope } from '../lib/curriculumScope';
 import { auth } from '../../firebase';
@@ -35,8 +35,6 @@ interface AddObservationDialogProps {
   grade?: string;
   schoolId?: string;
 }
-
-type PerformanceLevel = 'needs-support' | 'still-learning' | 'meets-expectations' | 'exceeds-expectations';
 
 // Live captioning via the browser's built-in Speech Recognition API (free,
 // on-device where supported - no server/API-key infrastructure). It only
@@ -275,6 +273,7 @@ export function AddObservationDialog({
       timestamp: new Date().toISOString(),
       tags: [...selectedRubrics, ...(selectedStrand ? [selectedStrand] : []), ...tags],
       subject: subject || undefined,
+      performanceLevel: performanceLevel || undefined,
     };
 
     let mediaFile: File | undefined;
@@ -306,6 +305,7 @@ export function AddObservationDialog({
     setContent('');
     setSelectedRubrics([]);
     setSelectedStrand('');
+    setPerformanceLevel('');
     setTags([]);
     setTagInput('');
     setImageFile(null);

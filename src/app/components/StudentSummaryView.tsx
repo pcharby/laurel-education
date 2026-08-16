@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Student, Observation } from '../lib/types';
 import { formatStudentName } from '../lib/utils';
+import { performanceLevelLabel, performanceLevelColor } from '../lib/performanceLevel';
 import { deleteStudent, getObservationsByStudent } from '../lib/storage';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
@@ -380,7 +381,17 @@ export function StudentSummaryView({ student, onBack, onGenerateReport, onViewOb
                 .slice(0, 5)
                 .map(obs => (
                   <div key={obs.id} className="bg-gray-50 border rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">{format(new Date(obs.timestamp), 'MMM d, yyyy')}</p>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-xs text-gray-500">{format(new Date(obs.timestamp), 'MMM d, yyyy')}</p>
+                      {obs.performanceLevel && (
+                        <span
+                          className="text-[10px] font-medium text-white rounded-full px-2 py-0.5 shrink-0"
+                          style={{ backgroundColor: performanceLevelColor(obs.performanceLevel) }}
+                        >
+                          {performanceLevelLabel(obs.performanceLevel)}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-800 mb-2">{obs.content}</p>
                     {obs.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">

@@ -9,7 +9,7 @@ interface GeneratedEvaluation {
 }
 
 const callGenerateEvaluation = httpsCallable<
-  { studentName: string; observations: Pick<Observation, 'content' | 'type' | 'subject' | 'timestamp' | 'tags'>[] },
+  { studentName: string; observations: Pick<Observation, 'content' | 'type' | 'subject' | 'timestamp' | 'tags' | 'performanceLevel'>[] },
   GeneratedEvaluation
 >(functions, 'generateEvaluation');
 
@@ -25,6 +25,7 @@ export const generateEvaluation = async (
       subject: o.subject,
       timestamp: o.timestamp,
       tags: o.tags,
+      performanceLevel: o.performanceLevel,
     })),
   });
   return result.data;

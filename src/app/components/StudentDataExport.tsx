@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Student, Observation, Evaluation } from '../lib/types';
 import { getObservationsByStudent, getEvaluationsByStudent } from '../lib/storage';
 import { formatStudentName } from '../lib/utils';
+import { performanceLevelLabel } from '../lib/performanceLevel';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
 import { ArrowLeft, Download, Printer, Loader2 } from 'lucide-react';
@@ -53,6 +54,7 @@ export function StudentDataExport({ student, onBack }: StudentDataExportProps) {
         subject: o.subject ?? null,
         content: o.content,
         tags: o.tags,
+        performanceLevel: o.performanceLevel ?? null,
         timestamp: o.timestamp,
       })),
       evaluations: evaluations.map(e => ({
@@ -148,6 +150,9 @@ export function StudentDataExport({ student, onBack }: StudentDataExportProps) {
                     <span>{obs.subject || 'General'} &middot; {obs.type}</span>
                   </div>
                   <p className="text-sm mb-1">{obs.content}</p>
+                  {obs.performanceLevel && (
+                    <p className="text-xs text-gray-500">Performance Level: {performanceLevelLabel(obs.performanceLevel)}</p>
+                  )}
                   {obs.tags.length > 0 && (
                     <p className="text-xs text-gray-500">Tags: {obs.tags.join(', ')}</p>
                   )}

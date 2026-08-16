@@ -20,7 +20,15 @@ interface ObservationInput {
   subject?: string;
   timestamp: string;
   tags: string[];
+  performanceLevel?: string;
 }
+
+// Observation.performanceLevel is stored as a kebab-case slug ('meets-expectations')
+// - readable here rather than duplicating the label/color table that lives
+// client-side in src/app/lib/performanceLevel.ts (this package doesn't share
+// code with the client bundle).
+const formatPerformanceLevel = (level: string): string =>
+  level.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
 interface GenerateEvaluationRequest {
   studentName: string;
@@ -66,6 +74,7 @@ export const generateEvaluation = onCall<GenerateEvaluationRequest>(
     const observationsText = observations
       .map((obs, i) => {
         const parts = [`${i + 1}. [${obs.type}${obs.subject ? `, ${obs.subject}` : ''}] ${obs.content}`];
+        if (obs.performanceLevel) parts.push(`   Performance Level: ${formatPerformanceLevel(obs.performanceLevel)}`);
         if (obs.tags.length > 0) parts.push(`   Tags: ${obs.tags.join(', ')}`);
         return parts.join('\n');
       })

@@ -52,6 +52,8 @@ export interface SchoolClass {
   archived?: boolean;
 }
 
+export type PerformanceLevel = 'needs-support' | 'still-learning' | 'meets-expectations' | 'exceeds-expectations';
+
 export interface Observation {
   id: string;
   teacherId: string;
@@ -61,6 +63,7 @@ export interface Observation {
   timestamp: string;
   tags: string[];
   subject?: string;
+  performanceLevel?: PerformanceLevel;
   /** Set when type is 'audio' or 'image' and a recording/photo was captured. */
   mediaUrl?: string;
   storagePath?: string;

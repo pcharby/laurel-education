@@ -8,6 +8,7 @@ import { ArrowLeft, FileText, Mic, Image as ImageIcon, Trash2, Calendar, Tag } f
 import { format } from 'date-fns';
 import { LaurelLogo } from './LaurelLogo';
 import { formatStudentName } from '../lib/utils';
+import { performanceLevelLabel, performanceLevelColor } from '../lib/performanceLevel';
 import { useSchoolName } from '../lib/useSchoolName';
 
 interface StudentObservationHistoryProps {
@@ -158,6 +159,14 @@ export function StudentObservationHistory({ student, onBack }: StudentObservatio
                       {obs.subject && (
                         <Badge  className="text-xs">
                           {obs.subject}
+                        </Badge>
+                      )}
+                      {obs.performanceLevel && (
+                        <Badge
+                          className="text-xs text-white"
+                          style={{ backgroundColor: performanceLevelColor(obs.performanceLevel) }}
+                        >
+                          {performanceLevelLabel(obs.performanceLevel)}
                         </Badge>
                       )}
                     </div>

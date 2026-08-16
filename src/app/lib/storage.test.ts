@@ -131,6 +131,32 @@ describe('storage.ts teacher scoping', () => {
       )
     })
 
+    it('saveObservation includes performanceLevel when set, and strips it when absent', async () => {
+      await storage.saveObservation({
+        id: 'obs-2',
+        studentId: 'student-1',
+        type: 'text',
+        content: 'x',
+        timestamp: '2026-01-01',
+        tags: [],
+        performanceLevel: 'meets-expectations',
+      })
+      expect(addDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ performanceLevel: 'meets-expectations' })
+      )
+
+      await storage.saveObservation({
+        id: 'obs-3',
+        studentId: 'student-1',
+        type: 'text',
+        content: 'x',
+        timestamp: '2026-01-01',
+        tags: [],
+      })
+      expect(vi.mocked(addDoc).mock.calls.at(-1)?.[1]).not.toHaveProperty('performanceLevel')
+    })
+
     it('saveEvaluation stamps the document with the signed-in teacher\'s uid', async () => {
       await storage.saveEvaluation({
         id: 'eval-1',
