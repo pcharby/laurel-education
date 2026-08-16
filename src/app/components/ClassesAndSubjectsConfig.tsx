@@ -6,6 +6,16 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from './ui/alert-dialog';
 import { Alert, AlertDescription } from './ui/alert';
 import { ArrowLeft, Plus, X, BookOpen, Pencil, Check, Loader2, Lock, Archive, ChevronDown, ChevronUp, Building2, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,6 +45,8 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [rosterClass, setRosterClass] = useState<SchoolClass | null>(null);
+  const [archivingClass, setArchivingClass] = useState<SchoolClass | null>(null);
+  const [archiving, setArchiving] = useState(false);
 
   const loadClasses = () => {
     getClasses().then(result => {
@@ -120,14 +132,18 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
     }
   };
 
-  const archiveClass = async (id: string) => {
-    if (!confirm("Archive this class? It will move to Archived Classes and won't appear in your class selection menu. There's no undo from here - a teacher can flip it back by hand if it was archived by mistake.")) return;
+  const confirmArchive = async () => {
+    if (!archivingClass) return;
+    setArchiving(true);
     try {
-      await updateClass(id, { archived: true });
+      await updateClass(archivingClass.id, { archived: true });
       toast.success('Class archived.');
+      setArchivingClass(null);
       loadClasses();
     } catch {
       toast.error('Could not archive the class. Please try again.');
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -240,7 +256,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => archiveClass(classInfo.id)}
+                          onClick={() => setArchivingClass(classInfo)}
                           disabled={locked}
                           title={locked ? 'Your school year is locked - update the end date in Settings to archive classes.' : "Archive this class now, without waiting for the school year to end"}
                         >
@@ -315,6 +331,30 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
           classInfo={rosterClass}
         />
       )}
+
+      <AlertDialog open={!!archivingClass} onOpenChange={(open) => !open && !archiving && setArchivingClass(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Archive {archivingClass?.subject}{archivingClass ? ` — Grade ${archivingClass.grade}` : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              It will move to Archived Classes and won't appear in your class selection menu. There's no undo from here — you can flip it back by hand if it was archived by mistake.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={archiving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmArchive(); }}
+              disabled={archiving}
+              className="bg-[#1A1A40] hover:bg-[#1A1A40]/90 text-white gap-2"
+            >
+              {archiving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+              Archive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Add Class Dialog */}
       <Dialog open={showAddDialog} onOpenChange={(open) => !open && closeDialogs()}>
