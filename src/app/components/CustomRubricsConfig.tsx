@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { Rubric, Strand, SchoolClass, School } from '../lib/types';
 import { getClasses, getSchools, getRubrics, addRubric, deleteRubric, getStrands, addStrand, deleteStrand } from '../lib/storage';
 import { matchesScope } from '../lib/curriculumScope';
+import { getCurriculumTemplate } from '../lib/curriculumTemplates';
 import { auth } from '../../firebase';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Plus, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, X, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { LaurelLogo } from './LaurelLogo';
 import { useSchoolName } from '../lib/useSchoolName';
@@ -149,6 +150,8 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
   const [newStrand, setNewStrand] = useState('');
   const [addingStrand, setAddingStrand] = useState(false);
 
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+
   useEffect(() => {
     if (isDemo) return;
     Promise.all([getClasses(), getSchools()]).then(([allClasses, allSchools]) => {
@@ -282,6 +285,26 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
     }
   };
 
+  const template = !isDemo ? getCurriculumTemplate(selectedSubject) : undefined;
+
+  const handleApplyTemplate = async () => {
+    if (!template || !selectedSubject) return;
+    setApplyingTemplate(true);
+    try {
+      await Promise.all([
+        ...template.strands.map(label => addStrand(selectedSubject, label, selectedCombo?.grade, selectedCombo?.schoolId)),
+        ...template.rubrics.map(label => addRubric(selectedSubject, label, selectedCombo?.grade, selectedCombo?.schoolId)),
+      ]);
+      loadStrands();
+      loadRubrics();
+      toast.success(`Added starter strands and rubrics for ${selectedSubject}.`);
+    } catch {
+      toast.error('Could not add the starter template. Please try again.');
+    } finally {
+      setApplyingTemplate(false);
+    }
+  };
+
   const displayRubrics: (Rubric | string)[] = isDemo
     ? (DEMO_RUBRICS[selectedSubject] ?? [])
     : rubrics;
@@ -353,6 +376,23 @@ export function CustomRubricsConfig({ onBack }: CustomRubricsConfigProps) {
                   </Button>
                 ))}
               </div>
+            )}
+
+            {template && !rubricsLoading && !strandsLoading && rubrics.length === 0 && strands.length === 0 && (
+              <Card className="border-2 border-dashed border-[#6B5FE4]/40 bg-[#6B5FE4]/5">
+                <CardContent className="p-4 flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <p className="font-semibold text-gray-800">Start from a template?</p>
+                    <p className="text-sm text-gray-600">
+                      {selectedSubject} has {template.strands.length} common curriculum strands and {template.rubrics.length} rubrics you can start from - edit or remove anything you don't need.
+                    </p>
+                  </div>
+                  <Button onClick={handleApplyTemplate} disabled={applyingTemplate} className="gap-2 shrink-0" style={{ backgroundColor: '#6B5FE4' }}>
+                    {applyingTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Use Starter Template
+                  </Button>
+                </CardContent>
+              </Card>
             )}
 
             <EditableLabelCard

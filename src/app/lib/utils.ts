@@ -20,3 +20,14 @@ export function formatStudentName(fullName: string): string {
   const lastInitial = last.charAt(0).toUpperCase();
   return `${firstName} ${lastInitial}.`;
 }
+
+/**
+ * Extracts just the first name/token from a student's stored name, whether
+ * that's a full name ("Emma Thompson") or an already-minimized bulk-import
+ * name ("Emma T."). Used anywhere a name needs to read naturally in prose
+ * (e.g. report commentary) - "Emma T.'s own words" reads as broken
+ * possessive grammar, "Emma's own words" doesn't.
+ */
+export function firstNameOf(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] ?? '';
+}

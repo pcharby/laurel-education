@@ -248,6 +248,7 @@ export default function App() {
           onLogout={handleLogout}
           onSettings={handleSettings}
           onManageClasses={handleClassesAndSubjects}
+          onSchools={handleSchools}
         />
       )}
 

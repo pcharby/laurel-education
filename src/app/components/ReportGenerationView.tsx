@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { ArrowLeft, Copy, CheckCircle, Loader2, TrendingUp, BarChart, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { LaurelLogo } from './LaurelLogo';
-import { formatStudentName } from '../lib/utils';
+import { formatStudentName, firstNameOf } from '../lib/utils';
 import { getObservationsByStudent, saveEvaluation } from '../lib/storage';
 import { generateMockEvaluation } from '../lib/mock-ai';
 import { generateEvaluation as generateAIEvaluation } from '../lib/ai';
@@ -57,7 +57,7 @@ export function ReportGenerationView({ student, onBack }: ReportGenerationViewPr
 
       const results = await Promise.all(
         Array.from(bySubject.entries()).map(async ([subject, subjectObservations]) => {
-          const result = await generate(subjectObservations, student.name);
+          const result = await generate(subjectObservations, firstNameOf(student.name));
 
           // Demo accounts have no real data to attach this to; real accounts
           // get a persisted record so it shows up in the student's data

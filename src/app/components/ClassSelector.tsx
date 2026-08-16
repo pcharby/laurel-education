@@ -16,6 +16,7 @@ interface ClassSelectorProps {
   onLogout: () => void;
   onSettings: () => void;
   onManageClasses: () => void;
+  onSchools: () => void;
 }
 
 const DEMO_CLASSES: SchoolClass[] = [
@@ -53,7 +54,7 @@ const getSubjectColor = (subject: string) => {
   }
 };
 
-export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, onSettings, onManageClasses }: ClassSelectorProps) {
+export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, onSettings, onManageClasses, onSchools }: ClassSelectorProps) {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [schools, setSchools] = useState<School[]>([]);
@@ -184,6 +185,15 @@ export function ClassSelector({ onSelectClass, onViewStudentSummary, onLogout, o
               <Plus className="w-4 h-4" />
               Add Your First Class
             </Button>
+            {schools.length === 0 && (
+              <p className="text-sm text-gray-500 mt-4">
+                Teaching at more than one school this year?{' '}
+                <button onClick={onSchools} className="text-[#6B5FE4] font-medium underline underline-offset-2 hover:text-[#1A1A40]">
+                  Set up your schools
+                </button>{' '}
+                first so classes and curriculum can be scoped per school.
+              </p>
+            )}
           </div>
         ) : visibleClasses.length === 0 ? (
           <p className="text-center text-gray-500 py-8">No classes for this school yet.</p>

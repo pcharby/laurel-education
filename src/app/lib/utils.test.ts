@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatStudentName } from './utils'
+import { formatStudentName, firstNameOf } from './utils'
 
 describe('formatStudentName', () => {
   it('formats a two-part name to first name + last initial', () => {
@@ -29,5 +29,23 @@ describe('formatStudentName', () => {
   it('leaves an already-masked bulk-import numeric-suffix name unchanged', () => {
     expect(formatStudentName('Madonna (1)')).toBe('Madonna (1)')
     expect(formatStudentName('Emma Thompson. (2)')).toBe('Emma Thompson. (2)')
+  })
+})
+
+describe('firstNameOf', () => {
+  it('extracts the first token from a full name', () => {
+    expect(firstNameOf('Emma Thompson')).toBe('Emma')
+  })
+
+  it('extracts the first token from an already-masked bulk-import name', () => {
+    expect(firstNameOf('Emma T.')).toBe('Emma')
+  })
+
+  it('returns a single-word name unchanged', () => {
+    expect(firstNameOf('Cher')).toBe('Cher')
+  })
+
+  it('collapses leading whitespace before extracting', () => {
+    expect(firstNameOf('  Emma   Thompson  ')).toBe('Emma')
   })
 })
