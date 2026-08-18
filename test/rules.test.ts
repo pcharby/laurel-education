@@ -110,6 +110,71 @@ describe.each(LOCKABLE_COLLECTIONS)('%s - cross-teacher isolation', (collectionN
     const anon = testEnv.unauthenticatedContext().firestore();
     await assertFails(getDoc(doc(anon, collectionName, 'doc1')));
   });
+
+  it('unauthenticated create is denied too, not just read', async () => {
+    const anon = testEnv.unauthenticatedContext().firestore();
+    await assertFails(
+      addDoc(collection(anon, collectionName), { teacherId: TEACHER_A, grade: '5', createdAt: '2026-01-01' })
+    );
+  });
+
+  it('denies create once the teacher is school-year locked', async () => {
+    await seed(`teacherProfiles/${TEACHER_A}`, {
+      schoolYearEndDate: Timestamp.fromMillis(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertFails(
+      addDoc(collection(a, collectionName), { teacherId: TEACHER_A, grade: '5', createdAt: '2026-01-01' })
+    );
+  });
+
+  it('denies update once the teacher is school-year locked, on a doc created before the lock', async () => {
+    await seed(`${collectionName}/doc1`, { teacherId: TEACHER_A, grade: '5', createdAt: '2026-01-01' });
+    await seed(`teacherProfiles/${TEACHER_A}`, {
+      schoolYearEndDate: Timestamp.fromMillis(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertFails(updateDoc(doc(a, collectionName, 'doc1'), { grade: '6' }));
+  });
+});
+
+describe('schools - ownsExisting/ownsIncoming scoping, never lock-gated', () => {
+  it("teacher A cannot read, update, or delete teacher B's school", async () => {
+    await seed('schools/school1', { teacherId: TEACHER_B, name: 'Lincoln Elementary' });
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertFails(getDoc(doc(a, 'schools', 'school1')));
+    await assertFails(updateDoc(doc(a, 'schools', 'school1'), { name: 'Hijacked' }));
+    await assertFails(deleteDoc(doc(a, 'schools', 'school1')));
+  });
+
+  it('teacher A can read/update/delete their own school', async () => {
+    await seed('schools/school1', { teacherId: TEACHER_A, name: 'Lincoln Elementary' });
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertSucceeds(getDoc(doc(a, 'schools', 'school1')));
+    await assertSucceeds(updateDoc(doc(a, 'schools', 'school1'), { name: 'Renamed Elementary' }));
+    await assertSucceeds(deleteDoc(doc(a, 'schools', 'school1')));
+  });
+
+  it("cannot create a school spoofing another teacher's id", async () => {
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertFails(addDoc(collection(a, 'schools'), { teacherId: TEACHER_B, name: 'Spoofed' }));
+  });
+
+  it('unauthenticated requests are denied entirely', async () => {
+    await seed('schools/school1', { teacherId: TEACHER_A, name: 'Lincoln Elementary' });
+    const anon = testEnv.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(anon, 'schools', 'school1')));
+  });
+
+  it('stays writable even once the teacher is school-year locked - structural data, not annual classroom content', async () => {
+    await seed('schools/school1', { teacherId: TEACHER_A, name: 'Lincoln Elementary' });
+    await seed(`teacherProfiles/${TEACHER_A}`, {
+      schoolYearEndDate: Timestamp.fromMillis(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertSucceeds(updateDoc(doc(a, 'schools', 'school1'), { name: 'Still editable' }));
+    await assertSucceeds(addDoc(collection(a, 'schools'), { teacherId: TEACHER_A, name: 'A second school' }));
+  });
 });
 
 describe.each(['rubrics', 'strands'] as const)('%s - isolation and immutability', (collectionName) => {
@@ -132,10 +197,52 @@ describe.each(['rubrics', 'strands'] as const)('%s - isolation and immutability'
     await assertSucceeds(getDoc(doc(a, collectionName, 'doc1')));
     await assertSucceeds(deleteDoc(doc(a, collectionName, 'doc1')));
   });
+
+  it('unauthenticated create is denied', async () => {
+    const anon = testEnv.unauthenticatedContext().firestore();
+    await assertFails(addDoc(collection(anon, collectionName), { teacherId: TEACHER_A }));
+  });
+
+  it('denies create once the teacher is school-year locked', async () => {
+    await seed(`teacherProfiles/${TEACHER_A}`, {
+      schoolYearEndDate: Timestamp.fromMillis(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertFails(addDoc(collection(a, collectionName), { teacherId: TEACHER_A }));
+  });
 });
 
-describe('evaluations - not gated by school-year lock', () => {
-  it('is still creatable/updatable after the teacher is locked (report generation must keep working)', async () => {
+describe('evaluations - ownsExisting/ownsIncoming scoping, not gated by school-year lock', () => {
+  it("teacher A cannot read, update, or delete teacher B's evaluation", async () => {
+    await seed('evaluations/eval1', { teacherId: TEACHER_B, studentId: 's1', createdAt: '2026-01-01' });
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertFails(getDoc(doc(a, 'evaluations', 'eval1')));
+    await assertFails(updateDoc(doc(a, 'evaluations', 'eval1'), { studentId: 's2' }));
+    await assertFails(deleteDoc(doc(a, 'evaluations', 'eval1')));
+  });
+
+  it('teacher A can read/update/delete their own evaluation', async () => {
+    await seed('evaluations/eval1', { teacherId: TEACHER_A, studentId: 's1', createdAt: '2026-01-01' });
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertSucceeds(getDoc(doc(a, 'evaluations', 'eval1')));
+    await assertSucceeds(updateDoc(doc(a, 'evaluations', 'eval1'), { studentId: 's2' }));
+    await assertSucceeds(deleteDoc(doc(a, 'evaluations', 'eval1')));
+  });
+
+  it("cannot create an evaluation spoofing another teacher's id", async () => {
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertFails(
+      addDoc(collection(a, 'evaluations'), { teacherId: TEACHER_B, studentId: 's1', createdAt: '2026-01-01' })
+    );
+  });
+
+  it('unauthenticated requests are denied entirely', async () => {
+    await seed('evaluations/eval1', { teacherId: TEACHER_A, studentId: 's1', createdAt: '2026-01-01' });
+    const anon = testEnv.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(anon, 'evaluations', 'eval1')));
+  });
+
+  it('is still creatable after the teacher is locked (report generation must keep working)', async () => {
     await seed(`teacherProfiles/${TEACHER_A}`, {
       schoolYearEndDate: Timestamp.fromMillis(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago - well past the 2-day grace window
     });
@@ -143,6 +250,23 @@ describe('evaluations - not gated by school-year lock', () => {
     await assertSucceeds(
       addDoc(collection(a, 'evaluations'), { teacherId: TEACHER_A, studentId: 's1', createdAt: '2026-01-01' })
     );
+  });
+
+  it('is still updatable after the teacher is locked', async () => {
+    await seed('evaluations/eval1', { teacherId: TEACHER_A, studentId: 's1', createdAt: '2026-01-01' });
+    await seed(`teacherProfiles/${TEACHER_A}`, {
+      schoolYearEndDate: Timestamp.fromMillis(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertSucceeds(updateDoc(doc(a, 'evaluations', 'eval1'), { studentId: 's2' }));
+  });
+});
+
+describe('default deny', () => {
+  it('denies read and write on any collection not explicitly matched in firestore.rules', async () => {
+    const a = testEnv.authenticatedContext(TEACHER_A).firestore();
+    await assertFails(getDoc(doc(a, 'somethingUnlisted', 'doc1')));
+    await assertFails(setDoc(doc(a, 'somethingUnlisted', 'doc1'), { anything: true }));
   });
 });
 
@@ -260,7 +384,7 @@ describe('isTeacherLocked() - school-year lockdown', () => {
     );
   });
 
-  it('blocks create/update on classes/students/observations/rubrics/strands once locked', async () => {
+  it('blocks create/update on classes once locked (see the per-collection lock checks above for students/observations/rubrics/strands)', async () => {
     await seed(`teacherProfiles/${TEACHER_A}`, {
       schoolYearEndDate: Timestamp.fromMillis(Date.now() - 10 * 24 * 60 * 60 * 1000),
     });
