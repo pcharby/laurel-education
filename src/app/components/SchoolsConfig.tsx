@@ -156,6 +156,7 @@ export function SchoolsConfig({ onBack }: SchoolsConfigProps) {
                           variant="outline"
                           className="text-red-500 hover:text-red-700 hover:border-red-300"
                           onClick={() => removeSchool(school.id)}
+                          aria-label={`Remove ${school.name}`}
                         >
                           <X className="w-4 h-4" />
                         </Button>

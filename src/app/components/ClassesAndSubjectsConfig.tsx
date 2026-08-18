@@ -268,6 +268,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
                           variant="outline"
                           className="text-red-500 hover:text-red-700 hover:border-red-300"
                           onClick={() => removeClass(classInfo.id)}
+                          aria-label={`Remove ${classInfo.subject} class`}
                         >
                           <X className="w-4 h-4" />
                         </Button>
@@ -447,8 +448,9 @@ function ClassForm({
       </div>
       {schools.length > 0 && (
         <div className="space-y-1">
-          <Label>School</Label>
+          <Label htmlFor="class-school">School</Label>
           <select
+            id="class-school"
             value={form.schoolId}
             onChange={(e) => setForm(f => ({ ...f, schoolId: e.target.value }))}
             className="w-full h-10 px-3 rounded-md border border-input bg-transparent text-sm"

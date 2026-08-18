@@ -310,6 +310,7 @@ export function CurriculumConfig({ onBack, onCustomRubrics }: CurriculumConfigPr
                           type="button"
                           onClick={() => handleDelete(resource)}
                           className="text-muted-foreground hover:text-red-500 ml-2 shrink-0"
+                          aria-label={`Delete ${resource.title}`}
                         >
                           <X className="w-4 h-4" />
                         </button>

@@ -105,7 +105,7 @@ function EditableLabelCard({
                 return (
                   <Badge key={key} className="gap-2 py-2 px-3 text-sm">
                     {label}
-                    <button onClick={() => onRemove(item)} className="hover:text-red-600">
+                    <button onClick={() => onRemove(item)} className="hover:text-red-600" aria-label={`Remove ${label}`}>
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>

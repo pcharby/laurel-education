@@ -136,6 +136,7 @@ export function StudentSummarySelector({ onSelectStudent, onBack }: StudentSumma
           <Input
             type="text"
             placeholder="Search students..."
+            aria-label="Search students"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-10 bg-white"

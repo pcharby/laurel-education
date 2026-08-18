@@ -495,7 +495,7 @@ export function AddObservationDialog({
 
         <div className="space-y-4 mt-6">
           <div className="space-y-2">
-            <Label className="text-base font-semibold">Curriculum Strand</Label>
+            <Label htmlFor="curriculum-strand" className="text-base font-semibold">Curriculum Strand</Label>
             {strandsLoading ? (
               <div className="w-full flex justify-center py-2">
                 <Loader2 className="w-4 h-4 animate-spin text-[#6B5FE4]" />
@@ -506,6 +506,7 @@ export function AddObservationDialog({
               </p>
             ) : (
               <select
+                id="curriculum-strand"
                 value={selectedStrand}
                 onChange={(e) => setSelectedStrand(e.target.value)}
                 className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white"
@@ -612,7 +613,7 @@ export function AddObservationDialog({
                 {tags.map(tag => (
                   <Badge key={tag}  className="gap-1">
                     {tag}
-                    <button onClick={() => handleRemoveTag(tag)}>
+                    <button onClick={() => handleRemoveTag(tag)} aria-label={`Remove tag ${tag}`}>
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>

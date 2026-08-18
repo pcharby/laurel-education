@@ -176,10 +176,11 @@ export function StudentObservationHistory({ student, onBack }: StudentObservatio
                     </div>
                   </div>
                   <Button
-                    
+
                     size="sm"
                     onClick={() => handleDelete(obs)}
                     className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    aria-label={`Delete observation from ${format(new Date(obs.timestamp), 'MMM d, yyyy')}`}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
