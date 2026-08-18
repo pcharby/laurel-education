@@ -1,0 +1,597 @@
+<title>Laurel Education Compliance Review</title>
+<style>
+  :root {
+    --paper-sunken: #E9ECE3;
+    --paper: #FDFDFB;
+    --ink: #1E231F;
+    --ink-soft: #48524A;
+    --ink-faint: #78826F;
+    --rule: #D3D8C9;
+    --rule-soft: #E2E5D9;
+    --brass: #8A5A28;
+    --brass-bg: #F1E7D6;
+    --link: #6E4420;
+
+    --sev-critical: #8E2E2E;   --sev-critical-bg: #F7E6E4;
+    --sev-high:     #A85A16;   --sev-high-bg:     #F7ECDC;
+    --sev-medium:   #8A7215;   --sev-medium-bg:   #F5F0D8;
+    --sev-low:      #3E6B6E;   --sev-low-bg:      #E3EEEE;
+    --sev-watch:    #4B5670;   --sev-watch-bg:    #E7E9F0;
+    --sev-good:     #3D6B3F;   --sev-good-bg:     #E4EFE2;
+
+    --shadow: 0 1px 2px rgba(30,35,31,0.06), 0 8px 24px -12px rgba(30,35,31,0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper-sunken: #15171B;
+      --paper: #1D2024;
+      --ink: #EBEBE4;
+      --ink-soft: #B8BDB1;
+      --ink-faint: #838B7C;
+      --rule: #343A31;
+      --rule-soft: #292E26;
+      --brass: #D19E5F;
+      --brass-bg: #362B1A;
+      --link: #E0B57C;
+
+      --sev-critical: #E28C8C; --sev-critical-bg: #3B1F1F;
+      --sev-high:     #E3AD72; --sev-high-bg:     #3B2C18;
+      --sev-medium:   #DBC97C; --sev-medium-bg:   #36311A;
+      --sev-low:      #8FC7C9; --sev-low-bg:      #1B3335;
+      --sev-watch:    #A3ADCB; --sev-watch-bg:    #262B3B;
+      --sev-good:     #9BCB9B; --sev-good-bg:     #1E2E1F;
+
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper-sunken: #15171B;
+    --paper: #1D2024;
+    --ink: #EBEBE4;
+    --ink-soft: #B8BDB1;
+    --ink-faint: #838B7C;
+    --rule: #343A31;
+    --rule-soft: #292E26;
+    --brass: #D19E5F;
+    --brass-bg: #362B1A;
+    --link: #E0B57C;
+
+    --sev-critical: #E28C8C; --sev-critical-bg: #3B1F1F;
+    --sev-high:     #E3AD72; --sev-high-bg:     #3B2C18;
+    --sev-medium:   #DBC97C; --sev-medium-bg:   #36311A;
+    --sev-low:      #8FC7C9; --sev-low-bg:      #1B3335;
+    --sev-watch:    #A3ADCB; --sev-watch-bg:    #262B3B;
+    --sev-good:     #9BCB9B; --sev-good-bg:     #1E2E1F;
+
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper-sunken);
+    color: var(--ink);
+    margin: 0;
+    font-family: "Optima", "Segoe UI", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .desk {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: clamp(20px, 4vw, 56px) clamp(14px, 3vw, 24px) 80px;
+  }
+  .memo {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    box-shadow: var(--shadow);
+    padding: clamp(24px, 5vw, 64px);
+  }
+
+  h1, h2, h3 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+    color: var(--ink);
+    text-wrap: balance;
+    font-weight: 600;
+  }
+
+  .eyebrow {
+    font-family: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--brass);
+  }
+
+  h1.title {
+    font-size: clamp(1.7rem, 3.4vw, 2.35rem);
+    margin: 0.35em 0 0.15em;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+    margin: 0 0 1.6em;
+  }
+
+  .memo-meta {
+    font-family: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+    font-size: 0.86rem;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px 24px;
+    color: var(--ink-soft);
+    margin-bottom: 1.8em;
+  }
+  .memo-meta dt { color: var(--ink-faint); display: inline; }
+  .memo-meta dd { display: inline; margin: 0 0 0 0.5em; color: var(--ink); }
+  .memo-meta div { white-space: normal; }
+
+  .disclaimer {
+    background: var(--brass-bg);
+    border-left: 3px solid var(--brass);
+    border-radius: 2px;
+    padding: 14px 18px;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    margin-bottom: 2.4em;
+  }
+  .disclaimer strong { color: var(--ink); }
+
+  section { margin-bottom: 3em; }
+  section > h2 {
+    font-size: 1.32rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5em;
+    margin: 0 0 0.15em;
+    padding-bottom: 0.4em;
+    border-bottom: 1px solid var(--rule);
+  }
+  section > h2 .num {
+    font-family: ui-monospace, monospace;
+    color: var(--brass);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  section > p.lede { color: var(--ink-soft); max-width: 62ch; }
+
+  p { max-width: 68ch; }
+  a { color: var(--link); }
+
+  /* Stat strip */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 1.2em 0 1.6em;
+  }
+  .stat {
+    background: var(--paper);
+    padding: 16px 12px;
+    text-align: center;
+  }
+  .stat .n {
+    font-family: Georgia, serif;
+    font-size: 1.9rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .stat .l {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .stat.crit .n { color: var(--sev-critical); }
+  .stat.high .n { color: var(--sev-high); }
+  .stat.med  .n { color: var(--sev-medium); }
+  .stat.low  .n { color: var(--sev-low); }
+  .stat.watch .n { color: var(--sev-watch); }
+
+  /* In-place checklist */
+  .inplace {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px 20px;
+    list-style: none;
+    padding: 0;
+    margin: 1em 0;
+  }
+  .inplace li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 0.94rem;
+    color: var(--ink-soft);
+  }
+  .inplace li::before {
+    content: "✓";
+    color: var(--sev-good);
+    font-weight: 700;
+    flex-shrink: 0;
+    font-family: Georgia, serif;
+  }
+  .inplace li b { color: var(--ink); font-weight: 600; }
+  .inplace li code { font-size: 0.85em; }
+
+  code {
+    font-family: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+    background: var(--rule-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    font-size: 0.88em;
+  }
+
+  .cat-heading {
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 1.8em 0 0.8em;
+    padding-top: 0.4em;
+  }
+  .cat-heading:first-of-type { margin-top: 0.6em; }
+
+  /* Findings */
+  .finding {
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 16px 20px 18px;
+    margin-bottom: 12px;
+    background: var(--paper);
+  }
+  .finding-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .chip {
+    font-family: ui-monospace, monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .chip.crit  { color: var(--sev-critical); background: var(--sev-critical-bg); }
+  .chip.high  { color: var(--sev-high);     background: var(--sev-high-bg); }
+  .chip.med   { color: var(--sev-medium);   background: var(--sev-medium-bg); }
+  .chip.low   { color: var(--sev-low);      background: var(--sev-low-bg); }
+  .chip.watch { color: var(--sev-watch);    background: var(--sev-watch-bg); }
+
+  .finding-title {
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 1rem;
+  }
+  .finding p {
+    margin: 0.5em 0 0;
+    font-size: 0.94rem;
+    color: var(--ink-soft);
+    max-width: 72ch;
+  }
+  .finding p.rec {
+    margin-top: 0.6em;
+    padding-top: 0.6em;
+    border-top: 1px dashed var(--rule);
+  }
+  .finding p.rec b { color: var(--brass); font-weight: 600; }
+
+  /* Firebase coverage columns */
+  .coverage {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 1.2em;
+  }
+  @media (max-width: 640px) { .coverage { grid-template-columns: 1fr; } }
+  .cov-col {
+    border-radius: 4px;
+    padding: 18px 20px;
+    border: 1px solid var(--rule);
+  }
+  .cov-col.google { background: color-mix(in srgb, var(--sev-good-bg) 55%, var(--paper)); }
+  .cov-col.you { background: color-mix(in srgb, var(--brass-bg) 55%, var(--paper)); }
+  .cov-col h3 {
+    font-size: 0.98rem;
+    margin: 0 0 0.7em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cov-col h3 .dot {
+    width: 9px; height: 9px; border-radius: 50%; display: inline-block;
+  }
+  .cov-col.google h3 .dot { background: var(--sev-good); }
+  .cov-col.you h3 .dot { background: var(--brass); }
+  .cov-col ul { margin: 0; padding-left: 1.1em; font-size: 0.88rem; color: var(--ink-soft); }
+  .cov-col li { margin-bottom: 0.55em; }
+  .cov-col b { color: var(--ink); }
+
+  /* Priority sequence */
+  ol.priority {
+    list-style: none;
+    counter-reset: pri;
+    padding: 0;
+    margin: 1.2em 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  ol.priority li {
+    counter-increment: pri;
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 14px;
+    align-items: baseline;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 12px 18px;
+  }
+  ol.priority li::before {
+    content: counter(pri);
+    font-family: Georgia, serif;
+    font-size: 1.3rem;
+    color: var(--brass);
+    text-align: right;
+  }
+  ol.priority b { color: var(--ink); }
+  ol.priority span.note { display: block; color: var(--ink-soft); font-size: 0.9rem; margin-top: 2px; }
+
+  footer {
+    margin-top: 2.4em;
+    padding-top: 1.4em;
+    border-top: 1px solid var(--rule);
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+  }
+
+  @media print {
+    body { background: white; }
+    .memo { box-shadow: none; border: none; }
+  }
+</style>
+
+<div class="desk">
+  <div class="memo">
+
+    <span class="eyebrow">Privacy · Security · Regulatory — Internal Memorandum</span>
+    <h1 class="title">Compliance &amp; Security Gap Analysis</h1>
+    <p class="subtitle">A review of Laurel Education's privacy, data-protection, and security posture against what a school-board customer, a regulator, or a plaintiff's lawyer would actually ask to see.</p>
+
+    <dl class="memo-meta">
+      <div><dt>To:</dt><dd>Paul Charbonneau, Founder</dd></div>
+      <div><dt>From:</dt><dd>Claude, in a lawyer's analytical posture</dd></div>
+      <div><dt>Re:</dt><dd>Gaps in the current compliance/security program</dd></div>
+      <div><dt>Date:</dt><dd>August 18, 2026</dd></div>
+    </dl>
+
+    <div class="disclaimer">
+      <strong>Not legal advice.</strong> I am an AI assistant, not a lawyer, and nothing here is a substitute for review by qualified privacy counsel licensed in the relevant provinces — the same caveat your own <code>Laurel_Education_Privacy_Policy.docx</code>, <code>Terms_of_Service.docx</code>, and <code>Incident_Response_Plan.docx</code> already carry as unpublished drafts. Treat this as a structured, well-researched punch list for that counsel conversation, not as a substitute for it.
+    </div>
+
+    <section>
+      <h2><span class="num">1.</span> Scope &amp; Method</h2>
+      <p class="lede">I reviewed the actual repository, not just the intent behind it: <code>firestore.rules</code> and <code>storage.rules</code> in full; every Cloud Function under <code>functions/src/</code> (report generation, audit logging, rate limiting, cascading delete, inactivity purge, school-year lockdown); the three drafted legal documents and two subprocessor-DPA records in <code>/legal</code>; <code>firebase.json</code>; the GitHub Actions CI workflow and Dependabot configuration; and a live <code>npm audit</code> against both packages. Findings are graded by practical consequence, not by how technically interesting the gap is.</p>
+    </section>
+
+    <section>
+      <h2><span class="num">2.</span> Executive Snapshot</h2>
+      <div class="stats">
+        <div class="stat crit"><span class="n">2</span><span class="l">Critical</span></div>
+        <div class="stat high"><span class="n">4</span><span class="l">High</span></div>
+        <div class="stat med"><span class="n">8</span><span class="l">Medium</span></div>
+        <div class="stat low"><span class="n">2</span><span class="l">Low</span></div>
+        <div class="stat watch"><span class="n">2</span><span class="l">Watch</span></div>
+      </div>
+      <p>The honest headline: this is an unusually mature privacy and security posture for a pre-revenue, single-founder product. Someone already did the hard thinking — data isolation, AI pseudonymization, Canadian data residency, self-serve deletion, audit logging, a drafted Incident Response Plan. What's missing is almost entirely <b>closure and publication</b>, not construction: real documents sit in a folder marked "draft, not yet in effect," bracketed placeholders are unfilled, and nothing is actually linked from the app a teacher signs up through. That gap is cheap to close and expensive to leave open — it is the difference between "we have a privacy policy" and "we have a Word document."</p>
+    </section>
+
+    <section>
+      <h2><span class="num">3.</span> What's Already in Place</h2>
+      <p class="lede">Credit where it's due — none of this needs to be built, only finished:</p>
+      <ul class="inplace">
+        <li><b>Drafted Privacy Policy, Terms of Service &amp; Incident Response Plan</b> — PIPEDA-oriented, technically accurate to the actual codebase, in <code>/legal</code></li>
+        <li><b>Google Cloud DPA</b> accepted and recorded, with a written acceptance receipt</li>
+        <li><b>Anthropic DPA analysis</b> on file, terms located and summarized</li>
+        <li><b>Per-teacher data isolation</b> enforced server-side in <code>firestore.rules</code>, deny-by-default</li>
+        <li><b>AI name pseudonymization</b> — a student's real name never leaves for Anthropic; verified in <code>generateEvaluation</code></li>
+        <li><b>Canadian data residency</b> for Firestore &amp; Cloud Functions (<code>northamerica-northeast1</code>)</li>
+        <li><b>Self-serve right of access</b> — per-student PIPEDA-style data export (JSON + printable)</li>
+        <li><b>Self-serve right of erasure</b> — per-student delete and full-account delete, both immediate</li>
+        <li><b>Automated retention enforcement</b> — 2-year inactivity purge, cascading to Storage files</li>
+        <li><b>Immutable audit trail</b> — <code>auditLogs</code>, write-only by Cloud Functions, never client-writable</li>
+        <li><b>Rate limiting</b> on AI generation and curriculum uploads (abuse/cost control)</li>
+        <li><b>Secrets management</b> — Anthropic API key in Firebase Secret Manager, never hardcoded</li>
+        <li><b>Dependency monitoring</b> — Dependabot on both packages, weekly, plus GitHub Actions</li>
+        <li><b>No behavioral tracking</b> — no analytics or advertising trackers found anywhere in the client</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2><span class="num">4.</span> Gap Register</h2>
+      <p class="lede">Grouped by area. Each entry: what's missing, why it's not just paperwork, and the specific fix.</p>
+
+      <p class="cat-heading">A — Publication &amp; Contract Readiness</p>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip crit">Critical</span><span class="finding-title">Privacy Policy &amp; Terms of Service exist but were never published</span></div>
+        <p>Both documents are explicitly marked <em>"DRAFT FOR LEGAL REVIEW — NOT YET IN EFFECT."</em> Meanwhile, <code>LoginScreen.tsx</code> tells every signing-up teacher "you agree to our Terms of Service and Privacy Policy" — plain text, not a link, pointing at nothing. Right now the app collects real student personal information under a public promise that doesn't technically exist anywhere a user, a school board, or a regulator can read it.</p>
+        <p class="rec"><b>Fix:</b> Close the bracketed placeholders (legal entity name, business address, contact email, governing province, audit-log retention period, liability cap) with a paid hour of PIPEDA-familiar counsel, publish both as real routed pages, and link them from the signup screen.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip crit">Critical</span><span class="finding-title">Anthropic's DPA coverage is inferred, not documented as executed</span></div>
+        <p><code>anthropic_dpa_acceptance_record.md</code> concludes the DPA applies "automatically" via incorporation into Anthropic's Commercial Terms — a reasonable technical read, but not something you can hand a school board's procurement office as proof. The subprocessor list (Schedule 4) was never located either.</p>
+        <p class="rec"><b>Fix:</b> Before any board-level sales conversation, request a written confirmation letter (or countersigned copy) from Anthropic, and get the current subprocessor list on file.</p>
+      </div>
+
+      <p class="cat-heading">B — Consent, Contract Formation &amp; School-Board Readiness</p>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip high">High</span><span class="finding-title">No customer-facing DPA / Student Data Privacy Agreement template</span></div>
+        <p>Public school boards are governed by their own province's FOI/privacy statute (Ontario's MFIPPA, BC's FOIPPA, Alberta's FOIP, Quebec's Law 25) — not PIPEDA directly. Boards routinely require a vendor to sign <em>their</em> data-sharing agreement, or one meeting a specific template, before onboarding — a Terms of Service page does not satisfy that requirement on its own.</p>
+        <p class="rec"><b>Fix:</b> Draft a one-page DPA exhibit (subprocessors, security measures, breach-notice SLA, data location, deletion-on-termination) ahead of the first board pitch. Nearly all the raw content already exists in the Incident Response Plan and Privacy Policy.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip high">High</span><span class="finding-title">Signup is browsewrap, not clickwrap</span></div>
+        <p>The Terms/Privacy reference at signup is a passive sentence below the submit button — unlinked, with no checkbox, no logged acceptance. Courts weigh affirmative-assent UI heavily when a clickwrap agreement's enforceability is challenged; a browsewrap statement below a button is the weaker end of that spectrum.</p>
+        <p class="rec"><b>Fix:</b> Add a required, unchecked-by-default "I agree to the Terms of Service and Privacy Policy" checkbox wired to real links, and record <code>acceptedTermsVersion</code> + timestamp on the teacher's profile at signup.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip high">High</span><span class="finding-title">All bracketed placeholders remain open across all three legal documents</span></div>
+        <p>Legal entity name/structure, business address, privacy contact email, incident-lead backup, governing province, liability cap, audit-log retention period, and the OPC breach-report URL are all still marked as placeholders to be supplied.</p>
+        <p class="rec"><b>Fix:</b> A single punch-list closure pass — most of these are business decisions (pick a number, name a contact), not legal research.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip med">Medium</span><span class="finding-title">No versioned consent record</span></div>
+        <p>If the Privacy Policy changes, there's currently no way to know which version a given teacher agreed to, or to re-prompt on a material change — something Section 13 of the draft policy itself promises to do.</p>
+        <p class="rec"><b>Fix:</b> Same fix as the clickwrap item above — store the accepted version, and re-prompt when it bumps.</p>
+      </div>
+
+      <p class="cat-heading">C — Data Governance &amp; Retention</p>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip med">Medium</span><span class="finding-title"><code>auditLogs</code> has no retention limit or purge job</span></div>
+        <p>Every create/update/delete of a student, observation, or evaluation writes a permanent <code>auditLogs</code> entry, with no scheduled cleanup found anywhere in <code>functions/src/</code>. The Privacy Policy's own Section 8 leaves this exact retention period as an open placeholder — and indefinite retention of an activity trail sits in tension with PIPEDA's data-minimization principle once a defensible window is actually chosen.</p>
+        <p class="rec"><b>Fix:</b> Pick a period (1–3 years is a common bracket for an accountability trail like this) and add a scheduled purge mirroring the existing <code>purgeInactiveAccounts</code> pattern.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip med">Medium</span><span class="finding-title">No documented Privacy Impact Assessment for the AI feature</span></div>
+        <p>The AI report-generation feature is the single most sensitive data flow in the product — it's also the one feature a school board's privacy office will scrutinize hardest. There's no written PIA/DPIA turning "we pseudonymize the name" into a defensible, reviewable analysis.</p>
+        <p class="rec"><b>Fix:</b> A short PIA — data flow diagram, what's pseudonymized, what isn't (see next item), residual risk, mitigations — converts Section 6 of the Privacy Policy from a claim into evidence a board can actually rely on.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip med">Medium</span><span class="finding-title">Free-text observation content is sent to Anthropic verbatim</span></div>
+        <p>The Privacy Policy is honest about this ("please avoid including sensitive information... in observation text"), but a disclaimer isn't a control. A teacher can paste another student's name, or a medical or disciplinary detail, straight into a box that transmits to a US-hosted model. Confirmed live in <code>functions/src/index.ts</code> — only the subject student's name is withheld; the observation body goes as typed.</p>
+        <p class="rec"><b>Fix:</b> A lightweight client-side check before sending for AI generation — flag if the observation text appears to contain another enrolled student's name (pattern-match against the teacher's own roster) — mitigates without blocking legitimate use.</p>
+      </div>
+
+      <p class="cat-heading">D — Technical Security Controls</p>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip high">High</span><span class="finding-title">Firebase App Check is not enabled</span></div>
+        <p>Already identified and deliberately deferred pending a coordinated rollout — still open. Without it, anything that can present a valid Firebase Auth token (not necessarily the real app) can call <code>generateEvaluation</code> or write to Storage. This is the single highest-value remaining <em>technical</em> control on this list.</p>
+        <p class="rec"><b>Fix:</b> Execute the already-scoped plan — register a reCAPTCHA site key, wire the App Check SDK, run Monitor mode to confirm real traffic passes cleanly, then flip to Enforce. Do this before go-live, not after.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip med">Medium</span><span class="finding-title">No multi-factor authentication for teacher accounts</span></div>
+        <p>A compromised teacher password is a full-roster compromise — every student that teacher has ever entered, plus every AI-drafted evaluation. Firebase Authentication supports MFA natively; nothing in <code>src/</code> wires it up.</p>
+        <p class="rec"><b>Fix:</b> Enable Firebase Auth MFA (TOTP is simplest to ship) — opt-in for teachers now, with a path to requiring it for school-board accounts later.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip med">Medium</span><span class="finding-title">No self-service password reset</span></div>
+        <p>Not a compliance defect on its own, but the absence of a "Forgot password?" flow creates real pressure toward shared, reused, or written-down passwords — which <em>is</em> a security cost. <code>LoginScreen.tsx</code> has no reset path today.</p>
+        <p class="rec"><b>Fix:</b> Wire up Firebase Auth's built-in <code>sendPasswordResetEmail</code> — a small, contained change.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip med">Medium</span><span class="finding-title">No security headers on Hosting</span></div>
+        <p><code>firebase.json</code> sets <code>Cache-Control</code> only. There's no Content-Security-Policy, no <code>X-Frame-Options</code>/<code>frame-ancestors</code>, no <code>X-Content-Type-Options</code>, no Referrer-Policy, no Strict-Transport-Security. This is defense-in-depth — it contains the blast radius of a future application bug (XSS, clickjacking) rather than fixing a known hole today.</p>
+        <p class="rec"><b>Fix:</b> Add a headers block to <code>firebase.json</code>'s hosting config. Low effort, meaningfully raises the floor.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip low">Low</span><span class="finding-title">Security rules have no automated test coverage</span></div>
+        <p>The Incident Response Plan's own verification step — "attempt the previously-possible unauthorized read/write from a second test account" — is entirely manual today. A future rules change can regress silently until someone notices live.</p>
+        <p class="rec"><b>Fix:</b> Add Firebase emulator-based rules tests to CI, so a regression fails the build instead of waiting for discovery.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip low">Low</span><span class="finding-title">Moderate npm advisories, already tracked</span></div>
+        <p><code>npm audit</code> shows 5–8 moderate-severity advisories in both packages, all inside <code>firebase-tools</code>/<code>firebase-admin</code>'s own build-time transitive dependencies — not runtime-exposed to end users, and already inside Dependabot's weekly sweep.</p>
+        <p class="rec"><b>Fix:</b> No urgent action. Confirm Dependabot PRs are actually being merged, not just opened and ignored.</p>
+      </div>
+
+      <p class="cat-heading">E — Regulatory Scope Beyond Today's Documents</p>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip med">Medium</span><span class="finding-title">Quebec's Law 25 isn't analyzed</span></div>
+        <p>All three legal documents are drafted against PIPEDA and reference other provinces only in passing. Law 25 applies based on where the <em>individuals</em> are, not where Laurel Education is based — so it's live the moment a single Quebec teacher or board signs up, and separately requires a named privacy officer and, for certain projects, a privacy impact assessment.</p>
+        <p class="rec"><b>Fix:</b> Have counsel confirm applicability and name a privacy officer (by title — Paul, today) in the published policy.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip watch">Watch</span><span class="finding-title">No FERPA / COPPA / US state-law analysis</span></div>
+        <p>Irrelevant today — the product and every legal document are Canada-only. But education products cross borders easily, and a same-day "sure, we'll take a US pilot" reply before this exists would be a real exposure.</p>
+        <p class="rec"><b>Fix:</b> Treat as a pre-condition to any US pilot, not a current defect — but flag it in the roadmap now so it doesn't get skipped in the excitement of a first US lead.</p>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head"><span class="chip watch">Watch</span><span class="finding-title">Ontario's evolving public-sector AI rules</span></div>
+        <p>Ontario's newer public-sector cyber-security and AI-use obligations may eventually require a board to complete an AI-use assessment before adopting a tool like this one. Laurel Education isn't the regulated party — the board is — but being able to hand a board pre-built answers speeds up procurement considerably.</p>
+        <p class="rec"><b>Fix:</b> No code change. Worth a one-page "AI use summary" handout (model used, no-training confirmation, mandatory human review already required by Section 6 of the Terms of Service) built from facts that are already true.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="num">5.</span> The Shared-Responsibility Line</h2>
+      <p class="lede">Firebase/Google Cloud is doing real, load-bearing work here — it's worth being precise about where their responsibility ends and Laurel Education's begins, since a school board's security questionnaire will ask exactly this.</p>
+      <div class="coverage">
+        <div class="cov-col google">
+          <h3><span class="dot"></span>Covered by Firebase / Google Cloud</h3>
+          <ul>
+            <li><b>Encryption</b> in transit (TLS) and at rest (Google-managed AES-256) for Firestore, Storage, and Functions — no configuration needed</li>
+            <li><b>Physical &amp; infrastructure security</b>, ISO 27001/27017/27018 and SOC 1/2/3 certification of the underlying platform</li>
+            <li><b>Credential storage</b> for email/password accounts (Firebase Auth's own hashing) — and for Google/Microsoft sign-in, Laurel Education never sees the password at all</li>
+            <li><b>DDoS mitigation &amp; TLS termination</b> at Firebase Hosting's edge</li>
+            <li><b>Regional data residency</b> once configured — Firestore &amp; Functions are correctly pinned to <code>northamerica-northeast1</code> (Montreal) in this project</li>
+            <li><b>Point-in-time recovery</b> for Firestore — available; the Incident Response Plan assumes it's on, worth a one-line console check to confirm</li>
+          </ul>
+        </div>
+        <div class="cov-col you">
+          <h3><span class="dot"></span>Laurel Education's own responsibility</h3>
+          <ul>
+            <li><b>Authorization logic</b> — who can read/write what — lives entirely in <code>firestore.rules</code>/<code>storage.rules</code>, hand-written and correctly deny-by-default here</li>
+            <li><b>App Check</b> — opt-in, not automatic; still off (Gap D1)</li>
+            <li><b>MFA enforcement</b> — Firebase Auth supports it, but nothing turns it on (Gap D2)</li>
+            <li><b>Rate limiting beyond basic quota</b> — the custom <code>rateLimits</code> collection is Laurel Education's own build, and it's a real, working control</li>
+            <li><b>Audit logging</b> — Firebase gives infrastructure-level admin activity logs; the application-level <code>auditLogs</code> trail is custom-built here, and it's good</li>
+            <li><b>Security headers, consent UI, DPAs, breach notification content</b> — none of this is Firebase's to provide</li>
+            <li><b>Anthropic</b> as a subprocessor is entirely outside Google's DPA — its own coverage is tracked separately (Gap A2)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="num">6.</span> If Five Things Happen Before the First School Board Call</h2>
+      <ol class="priority">
+        <li><span>Close every bracketed placeholder in the three legal documents and spend one paid hour with real PIPEDA-familiar counsel — the documents themselves ask for exactly this before being relied upon.<span class="note">Gaps A1, A4, B4</span></span></li>
+        <li><span>Publish the Privacy Policy and Terms of Service as real, linked pages, and add an affirmative consent checkbox at signup.<span class="note">Gaps A1, B2</span></span></li>
+        <li><span>Turn on Firebase App Check — it's already fully scoped, it just needs the rollout executed.<span class="note">Gap D1</span></span></li>
+        <li><span>Draft a one-page customer-facing DPA / security summary exhibit for board procurement conversations.<span class="note">Gap B1</span></span></li>
+        <li><span>Enable MFA and self-service password reset for teacher accounts.<span class="note">Gaps D2, D3</span></span></li>
+      </ol>
+    </section>
+
+    <footer>
+      Prepared by Claude in a lawyer's analytical posture, not by a licensed lawyer — confirm every legal conclusion above with qualified privacy counsel before relying on it, and before this document (or the underlying Privacy Policy, Terms of Service, or Incident Response Plan) is shown to a customer, a school board, or a regulator. Based on the state of the repository as reviewed on August 18, 2026.
+    </footer>
+
+  </div>
+</div>

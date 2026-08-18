@@ -317,7 +317,7 @@ export function ClassesAndSubjectsConfig({ onBack }: ClassesAndSubjectsConfigPro
         <Card className="bg-accent/40 border-accent">
           <CardContent className="p-4">
             <p className="text-sm text-foreground">
-              <strong>Tip:</strong> Students are added from Student Summaries, not here. By default, any student in a class's grade shows up when you record an observation for it — use <strong>Roster</strong> on a class to pick a specific set of students instead, useful when two classes share a grade but not the same students.
+              <strong>Tip:</strong> By default, any student in a class's grade shows up when you record an observation for it. Use <strong>Roster</strong> on a class to pick — or upload — a specific set of students instead, useful when two classes share a grade but not the same students.
             </p>
           </CardContent>
         </Card>

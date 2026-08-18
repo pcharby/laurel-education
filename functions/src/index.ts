@@ -9,6 +9,7 @@ import { REGION } from './region.js';
 export { auditStudents, auditObservations, auditEvaluations } from './auditLog.js';
 export { cascadeDeleteStudentData } from './cascadeDelete.js';
 export { purgeInactiveAccounts } from './purgeInactiveAccounts.js';
+export { purgeOldAuditLogs } from './purgeOldAuditLogs.js';
 export { purgeAllAccounts } from './purgeAllAccounts.js';
 export { schoolYearLockdownSweep, archiveMyPreviousYear } from './schoolYearLockdown.js';
 

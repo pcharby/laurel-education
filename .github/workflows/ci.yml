@@ -18,6 +18,11 @@ jobs:
           node-version: 20
           cache: npm
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
       - run: npm ci
 
       - name: Type-check
@@ -25,6 +30,9 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Security rules tests (Firestore + Storage emulators)
+        run: npm run test:rules
 
       - name: Build
         run: npm run build

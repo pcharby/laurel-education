@@ -55,8 +55,14 @@ export const getArchivedStudents = async (): Promise<Student[]> => {
   return students.filter(s => s.archived === true);
 };
 
-export const saveStudent = async (student: Omit<Student, 'teacherId'>): Promise<void> => {
-  await addDoc(collection(db, 'students'), { ...student, teacherId: getTeacherId() });
+// Returns the new document's real Firestore id (addDoc assigns it - the
+// `id` field on the input is discarded on write, same as every other
+// caller's `id` field here today). Callers that need to reference the
+// student immediately after creating it (e.g. checking it into a class
+// roster) use this instead of re-fetching and matching by name.
+export const saveStudent = async (student: Omit<Student, 'teacherId'>): Promise<string> => {
+  const ref = await addDoc(collection(db, 'students'), { ...student, teacherId: getTeacherId() });
+  return ref.id;
 };
 
 export const getStudentById = async (id: string): Promise<Student | undefined> => {

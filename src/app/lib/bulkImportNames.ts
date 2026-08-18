@@ -1,3 +1,16 @@
+// A CSV export's name column may be quoted/comma-separated with other
+// fields - take the first column as the name and strip any surrounding
+// quotes. A plain one-name-per-line paste has no commas, so this is a
+// no-op for that common case.
+const firstColumn = (line: string): string => line.split(',')[0].trim().replace(/^"|"$/g, '');
+
+// Turns raw pasted/uploaded text (one name per line, or a CSV with the name
+// in the first column) into a plain list of full names, ready to pass to
+// resolveBulkImportNames. Shared by every "paste or upload a roster" entry
+// point (BulkImportStudentsDialog, ManageClassRosterDialog).
+export const parseNameListText = (rawText: string): string[] =>
+  rawText.split('\n').map(firstColumn).filter(Boolean);
+
 interface ParsedName {
   first: string;
   /** Empty when only a single name/word was given - no last name to draw a prefix from. */

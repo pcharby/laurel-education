@@ -24,6 +24,9 @@ export default mergeConfig(
         '**/.{idea,git,cache,output,temp}/**',
         '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
         '**/.claude/**',
+        // Needs the Firestore/Storage emulators - run separately via
+        // `npm run test:rules`, never as part of the plain unit suite.
+        '**/test/**',
       ],
     },
   })

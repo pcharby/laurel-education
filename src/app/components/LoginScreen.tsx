@@ -11,6 +11,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  sendPasswordResetEmail,
   GoogleAuthProvider,
   OAuthProvider,
   AuthProvider,
@@ -41,6 +42,7 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const handleSubmit = async () => {
     setError('');
@@ -73,6 +75,35 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
   const toggleMode = () => {
     setMode(mode === 'signin' ? 'signup' : 'signin');
     setError('');
+    setResetSent(false);
+  };
+
+  // Deliberately generic on auth/user-not-found - confirming or denying an
+  // account exists for a given email is an enumeration risk, so that case
+  // shows the same success state as a real send. auth/invalid-email is
+  // still surfaced directly since it's a format problem, not an
+  // enumeration signal.
+  const handleForgotPassword = async () => {
+    setError('');
+    setResetSent(false);
+    if (!email.trim()) {
+      setError('Enter your email above, then click "Forgot password?"');
+      return;
+    }
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetSent(true);
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? '';
+      if (code === 'auth/user-not-found') {
+        setResetSent(true);
+      } else {
+        setError(AUTH_ERROR_MESSAGES[code] ?? 'Something went wrong. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSsoSignIn = async (provider: AuthProvider) => {
@@ -110,35 +141,16 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <div className="space-y-4 bg-gradient-to-br from-[#F0EEF8] to-[#EBE8F5] rounded-lg p-4 border-2 border-[#D4D0EE]">
-              <h3 className="font-semibold text-sm flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 text-[#6B5FE4]" />
-                What Laurel Education Does:
-              </h3>
-              <ul className="space-y-2 text-sm text-gray-700">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <span>Capture observations via text, audio, or photos in under 30 seconds</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <span>Centralize all student assessment data in one place</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <span>Generate AI-powered report card commentary aligned with curriculum</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <span>Track class and student progress with visual dashboards</span>
-                </li>
-              </ul>
-            </div>
-
             <div className="space-y-4">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {resetSent && (
+                <Alert>
+                  <AlertDescription>If an account exists for that email, we've sent a password reset link.</AlertDescription>
                 </Alert>
               )}
 
@@ -169,6 +181,17 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
                   disabled={loading}
                />
               </div>
+
+              {mode === 'signin' && (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                  className="block w-full text-right text-xs text-[#6B5FE4] hover:underline -mt-2"
+                >
+                  Forgot password?
+                </button>
+              )}
 
               <Button
                 onClick={handleSubmit}
@@ -240,6 +263,31 @@ export function LoginScreen({ onLogin, onDemo }: LoginScreenProps) {
             <p className="text-xs text-center text-gray-500">
               By signing in, you agree to our Terms of Service and Privacy Policy
             </p>
+
+            <div className="space-y-4 bg-gradient-to-br from-[#F0EEF8] to-[#EBE8F5] rounded-lg p-4 border-2 border-[#D4D0EE]">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-[#6B5FE4]" />
+                What Laurel Education Does:
+              </h3>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                  <span>Capture observations via text, audio, or photos in under 30 seconds</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                  <span>Centralize all student assessment data in one place</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                  <span>Generate AI-powered report card commentary aligned with curriculum</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                  <span>Track class and student progress with visual dashboards</span>
+                </li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>

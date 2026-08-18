@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { School } from '../lib/types';
 import { saveStudent, getSchools } from '../lib/storage';
-import { resolveBulkImportNames } from '../lib/bulkImportNames';
+import { parseNameListText, resolveBulkImportNames } from '../lib/bulkImportNames';
 import {
   Dialog,
   DialogContent,
@@ -13,10 +13,10 @@ import {
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription } from './ui/alert';
-import { Upload, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { NameListUploadField } from './NameListUploadField';
 
 interface BulkImportStudentsDialogProps {
   open: boolean;
@@ -26,12 +26,6 @@ interface BulkImportStudentsDialogProps {
   defaultSchoolId?: string;
 }
 
-// A CSV export's name column may be quoted/comma-separated with other
-// fields - take the first column as the name and strip any surrounding
-// quotes. A plain one-name-per-line paste has no commas, so this is a
-// no-op for that common case.
-const firstColumn = (line: string): string => line.split(',')[0].trim().replace(/^"|"$/g, '');
-
 export function BulkImportStudentsDialog({ open, onClose, onSuccess, defaultGrade, defaultSchoolId }: BulkImportStudentsDialogProps) {
   const [rawText, setRawText] = useState('');
   const [grade, setGrade] = useState(defaultGrade ?? '');
@@ -39,25 +33,13 @@ export function BulkImportStudentsDialog({ open, onClose, onSuccess, defaultGrad
   const [schools, setSchools] = useState<School[]>([]);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getSchools().then(setSchools);
   }, []);
 
-  const names = rawText
-    .split('\n')
-    .map(firstColumn)
-    .filter(Boolean);
+  const names = parseNameListText(rawText);
   const resolvedNames = resolveBulkImportNames(names);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    setRawText(text);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
 
   const handleImport = async () => {
     if (names.length === 0) {
@@ -131,30 +113,13 @@ export function BulkImportStudentsDialog({ open, onClose, onSuccess, defaultGrad
             </div>
           )}
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="bulk-names">Student Names (one per line)</Label>
-              <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2">
-                <Upload className="w-3.5 h-3.5" />
-                Upload File
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv,.txt"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-            </div>
-            <Textarea
-              id="bulk-names"
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              placeholder={'Emma Thompson\nLiam Chen\nSophia Martinez'}
-              rows={6}
-              disabled={importing}
-            />
-          </div>
+          <NameListUploadField
+            id="bulk-names"
+            label="Student Names (one per line)"
+            rawText={rawText}
+            onRawTextChange={setRawText}
+            disabled={importing}
+          />
 
           {names.length > 0 && (
             <div className="space-y-1">

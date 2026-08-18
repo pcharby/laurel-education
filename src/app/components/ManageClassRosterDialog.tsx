@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SchoolClass, Student } from '../lib/types';
-import { getStudents, updateClass, clearClassRoster } from '../lib/storage';
+import { getStudents, saveStudent, updateClass, clearClassRoster } from '../lib/storage';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,13 @@ import {
 } from './ui/dialog';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
-import { Loader2 } from 'lucide-react';
+import { Label } from './ui/label';
+import { Loader2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatStudentName } from '../lib/utils';
 import { compareStudentsByFirstName } from '../lib/sortStudents';
+import { parseNameListText, resolveBulkImportNames } from '../lib/bulkImportNames';
+import { NameListUploadField } from './NameListUploadField';
 
 interface ManageClassRosterDialogProps {
   open: boolean;
@@ -35,6 +38,11 @@ export function ManageClassRosterDialog({ open, onClose, onSuccess, classInfo }:
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [uploadText, setUploadText] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  const uploadNames = parseNameListText(uploadText);
+  const resolvedUploadNames = resolveBulkImportNames(uploadNames);
 
   useEffect(() => {
     if (!open) return;
@@ -60,6 +68,39 @@ export function ManageClassRosterDialog({ open, onClose, onSuccess, classInfo }:
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+
+  // Creates each pasted/uploaded name as a new Student scoped to this
+  // class's grade and school, then checks it straight into the roster -
+  // the class's grade/school are already known here, so there's no reason
+  // to ask again the way the standalone Student Summaries import does.
+  // Membership isn't persisted to the class until "Save Roster" is
+  // clicked, same as toggling an existing student's checkbox.
+  const handleUpload = async () => {
+    if (resolvedUploadNames.length === 0) return;
+    setUploading(true);
+    try {
+      const newIds = await Promise.all(
+        resolvedUploadNames.map(name =>
+          saveStudent({
+            id: `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name,
+            grade: classInfo.grade,
+            ...(classInfo.schoolId && { schoolId: classInfo.schoolId }),
+            createdAt: new Date().toISOString(),
+          })
+        )
+      );
+      const students = await getStudents();
+      setCandidates(students.filter(s => isCandidate(s, classInfo)).sort(compareStudentsByFirstName));
+      setSelected(prev => new Set([...prev, ...newIds]));
+      setUploadText('');
+      toast.success(`Added ${newIds.length} student${newIds.length === 1 ? '' : 's'} - click Save Roster to keep them on this class.`);
+    } catch {
+      toast.error('Could not add those students. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -109,7 +150,7 @@ export function ManageClassRosterDialog({ open, onClose, onSuccess, classInfo }:
             </div>
           ) : candidates.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">
-              No Grade {classInfo.grade} students yet. Add students from Student Summaries first, then come back to build this class's roster.
+              No Grade {classInfo.grade} students yet. Add some below, or from Student Summaries.
             </p>
           ) : (
             <div className="max-h-72 overflow-y-auto border-2 rounded-lg p-3 bg-gray-50 space-y-1">
@@ -128,6 +169,40 @@ export function ManageClassRosterDialog({ open, onClose, onSuccess, classInfo }:
           <p className="text-xs text-muted-foreground">
             {selected.size} of {candidates.length} selected.
           </p>
+        </div>
+
+        <div className="space-y-2 pt-2 border-t">
+          <Label className="text-sm font-medium">Add new students to this class</Label>
+          <p className="text-xs text-muted-foreground">
+            Paste or upload a list. New students are added at Grade {classInfo.grade}{classInfo.schoolId ? ' for this school' : ''} and checked in above automatically - only their first name and last initial are imported, never their full last name.
+          </p>
+          <NameListUploadField
+            id="roster-upload"
+            label="New Student Names (one per line)"
+            rawText={uploadText}
+            onRawTextChange={setUploadText}
+            disabled={uploading}
+          />
+          {uploadNames.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Preview - will be added as:</Label>
+              <div className="max-h-28 overflow-y-auto border-2 rounded-lg p-2 bg-gray-50 text-sm space-y-1">
+                {resolvedUploadNames.map((name, i) => (
+                  <div key={i} className="text-gray-700">{name}</div>
+                ))}
+              </div>
+            </div>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleUpload}
+            disabled={uploading || uploadNames.length === 0}
+            className="gap-2"
+          >
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+            Add {uploadNames.length > 0 ? `${uploadNames.length} ` : ''}Student{uploadNames.length === 1 ? '' : 's'}
+          </Button>
         </div>
 
         <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2">
