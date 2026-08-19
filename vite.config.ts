@@ -1,8 +1,19 @@
 import { defineConfig } from 'vite'
 import path from 'path'
+import { execSync } from 'child_process'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
+// Stamped into every build so bug reports can say exactly which deploy
+// they came from. Falls back gracefully outside a git checkout (e.g. a
+// packaged CI artifact with no .git directory).
+const commitSha = (() => {
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim()
+  } catch {
+    return 'unknown'
+  }
+})()
 
 function figmaAssetResolver() {
   return {
@@ -33,4 +44,8 @@ export default defineConfig({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
+
+  define: {
+    __APP_VERSION__: JSON.stringify(commitSha),
+  },
 })

@@ -45,17 +45,55 @@ type View =
   | 'school-profile'
   | 'schools';
 
+const VIEW_LABELS: Record<View, string> = {
+  login: 'Login',
+  'class-selection': 'Select Class',
+  'type-selection': 'Choose Observation Type',
+  'student-selection': 'Select Student',
+  'observation-entry': 'Add Observation',
+  'summary-student-selection': 'Select Student (Summary)',
+  'student-summary': 'Student Summary',
+  'report-generation': 'Generate Report',
+  'observation-history': 'Observation History',
+  'data-export': 'Export Student Data',
+  'class-insights': 'Class Insights',
+  'custom-rubrics': 'Custom Rubrics',
+  settings: 'Settings',
+  'classes-and-subjects': 'Classes & Subjects',
+  curriculum: 'Curriculum',
+  'password-management': 'Password Management',
+  'report-problem': 'Report a Problem',
+  'school-profile': 'School Profile',
+  schools: 'Schools',
+};
+
+// Report Problem is only reachable via Settings, which is itself only
+// reachable from Select Class - so "the screen right before this one" is
+// always the same and tells you nothing about where the teacher actually
+// hit a problem. This keeps a short trail of every screen visited instead,
+// so a bug report can show the real path (e.g. "Add Observation -> Select
+// Class -> Settings") rather than just the last hop.
+const MAX_TRAIL_LENGTH = 6;
+
 export default function App() {
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
   const [view, setView] = useState<View>('login');
+  const [viewTrail, setViewTrail] = useState<View[]>(['login']);
   const [selectedClass, setSelectedClass] = useState<SchoolClass | null>(null);
   const [selectedType, setSelectedType] = useState<'text' | 'audio' | 'image' | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
+  const goTo = (next: View) => {
+    setView(next);
+    setViewTrail((prev) => [...prev, next].slice(-MAX_TRAIL_LENGTH));
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
-      setView(user ? 'class-selection' : 'login');
+      const next = user ? 'class-selection' : 'login';
+      setView(next);
+      setViewTrail([next]);
     });
     return unsubscribe;
   }, []);
@@ -75,143 +113,143 @@ export default function App() {
 
   const handleSelectClass = (classInfo: SchoolClass) => {
     setSelectedClass(classInfo);
-    setView('type-selection');
+    goTo('type-selection');
   };
 
   const handleViewStudentSummary = () => {
-    setView('summary-student-selection');
+    goTo('summary-student-selection');
   };
 
   const handleSelectType = (type: 'text' | 'audio' | 'image') => {
     setSelectedType(type);
-    setView('student-selection');
+    goTo('student-selection');
   };
 
   const handleSelectStudent = (student: Student) => {
     setSelectedStudent(student);
-    setView('observation-entry');
+    goTo('observation-entry');
   };
 
   const handleSelectStudentForSummary = (student: Student) => {
     setSelectedStudent(student);
-    setView('student-summary');
+    goTo('student-summary');
   };
 
   const handleBackToClassSelection = () => {
-    setView('class-selection');
+    goTo('class-selection');
     setSelectedClass(null);
     setSelectedType(null);
   };
 
   const handleBackToTypeSelection = () => {
-    setView('type-selection');
+    goTo('type-selection');
     setSelectedType(null);
   };
 
   const handleBackToSummarySelection = () => {
-    setView('summary-student-selection');
+    goTo('summary-student-selection');
     setSelectedStudent(null);
   };
 
   const handleCloseObservation = () => {
-    setView('type-selection');
+    goTo('type-selection');
     setSelectedType(null);
     setSelectedStudent(null);
   };
 
   const handleObservationSuccess = () => {
     toast.success('Observation saved successfully!');
-    setView('type-selection');
+    goTo('type-selection');
     setSelectedType(null);
     setSelectedStudent(null);
   };
 
   const handleGenerateReport = () => {
-    setView('report-generation');
+    goTo('report-generation');
   };
 
   const handleBackFromReport = () => {
-    setView('student-summary');
+    goTo('student-summary');
   };
 
   const handleViewObservations = () => {
-    setView('observation-history');
+    goTo('observation-history');
   };
 
   const handleBackFromObservations = () => {
-    setView('student-summary');
+    goTo('student-summary');
   };
 
   const handleExportData = () => {
-    setView('data-export');
+    goTo('data-export');
   };
 
   const handleBackFromExport = () => {
-    setView('student-summary');
+    goTo('student-summary');
   };
 
   const handleClassInsights = () => {
-    setView('class-insights');
+    goTo('class-insights');
   };
 
   const handleBackFromClassInsights = () => {
-    setView('type-selection');
+    goTo('type-selection');
   };
 
   const handleCustomRubrics = () => {
-    setView('custom-rubrics');
+    goTo('custom-rubrics');
   };
 
   const handleBackFromCustomRubrics = () => {
-    setView('curriculum');
+    goTo('curriculum');
   };
 
   const handleClassesAndSubjects = () => {
-    setView('classes-and-subjects');
+    goTo('classes-and-subjects');
   };
 
   const handleBackFromClassesAndSubjects = () => {
-    setView('settings');
+    goTo('settings');
   };
 
   const handleCurriculum = () => {
-    setView('curriculum');
+    goTo('curriculum');
   };
 
   const handleBackFromCurriculum = () => {
-    setView('settings');
+    goTo('settings');
   };
 
   const handlePasswordManagement = () => {
-    setView('password-management');
+    goTo('password-management');
   };
 
   const handleBackFromPasswordManagement = () => {
-    setView('settings');
+    goTo('settings');
   };
 
   const handleReportProblem = () => {
-    setView('report-problem');
+    goTo('report-problem');
   };
 
   const handleBackFromReportProblem = () => {
-    setView('settings');
+    goTo('settings');
   };
 
   const handleSchoolProfile = () => {
-    setView('school-profile');
+    goTo('school-profile');
   };
 
   const handleBackFromSchoolProfile = () => {
-    setView('settings');
+    goTo('settings');
   };
 
   const handleSchools = () => {
-    setView('schools');
+    goTo('schools');
   };
 
   const handleBackFromSchools = () => {
-    setView('settings');
+    goTo('settings');
   };
 
   const handleLogout = async () => {
@@ -220,11 +258,11 @@ export default function App() {
   };
 
   const handleSettings = () => {
-    setView('settings');
+    goTo('settings');
   };
 
   const handleBackFromSettings = () => {
-    setView('class-selection');
+    goTo('class-selection');
   };
 
   if (authUser === undefined) {
@@ -347,7 +385,13 @@ export default function App() {
       )}
 
       {view === 'report-problem' && (
-        <ReportProblem onBack={handleBackFromReportProblem} />
+        <ReportProblem
+          onBack={handleBackFromReportProblem}
+          screenTrail={viewTrail
+            .filter((v) => v !== 'report-problem')
+            .map((v) => VIEW_LABELS[v])
+            .join(' -> ')}
+        />
       )}
 
       {view === 'report-generation' && selectedStudent && (

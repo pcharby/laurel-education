@@ -13,6 +13,8 @@ import { BugReport } from '../lib/types';
 
 interface ReportProblemProps {
   onBack: () => void;
+  /** Human-readable trail of the last few screens visited, e.g. "Add Observation -> Select Class -> Settings". */
+  screenTrail: string;
 }
 
 const CATEGORY_LABELS: Record<BugReport['category'], string> = {
@@ -21,7 +23,7 @@ const CATEGORY_LABELS: Record<BugReport['category'], string> = {
   other: 'Something else',
 };
 
-export function ReportProblem({ onBack }: ReportProblemProps) {
+export function ReportProblem({ onBack, screenTrail }: ReportProblemProps) {
   const [category, setCategory] = useState<BugReport['category']>('bug');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
@@ -37,7 +39,7 @@ export function ReportProblem({ onBack }: ReportProblemProps) {
 
     setSubmitting(true);
     try {
-      await submitBugReport({ category, description: description.trim() });
+      await submitBugReport({ category, description: description.trim(), screenTrail });
       setSubmitted(true);
     } catch {
       toast.error('Could not send your report. Please try again.');
@@ -125,7 +127,7 @@ export function ReportProblem({ onBack }: ReportProblemProps) {
         </Card>
 
         <p className="text-xs text-gray-500 px-1">
-          Your account email and some basic technical details (browser, screen size) are included automatically to help us investigate.
+          Your account email, name, and school, plus some basic technical details (browser, screen size, and the screens you were on) are included automatically to help us investigate.
         </p>
       </div>
 

@@ -12,6 +12,7 @@ export { purgeInactiveAccounts } from './purgeInactiveAccounts.js';
 export { purgeOldAuditLogs } from './purgeOldAuditLogs.js';
 export { purgeAllAccounts } from './purgeAllAccounts.js';
 export { schoolYearLockdownSweep, archiveMyPreviousYear } from './schoolYearLockdown.js';
+export { notifyOnBugReport } from './notifyOnBugReport.js';
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 

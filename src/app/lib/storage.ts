@@ -300,14 +300,18 @@ export const getEvaluationsByStudent = async (studentId: string): Promise<Evalua
 // directly in the Firestore console. Not included in deleteAllMyData, same
 // as auditLogs/rateLimits: operational data, not the teacher's own content.
 export const submitBugReport = async (
-  report: Pick<BugReport, 'category' | 'description'>
+  report: Pick<BugReport, 'category' | 'description' | 'screenTrail'>
 ): Promise<void> => {
+  const profile = await getTeacherProfile();
   await addDoc(collection(db, 'bugReports'), {
     ...report,
     teacherId: getTeacherId(),
     teacherEmail: auth.currentUser?.email ?? null,
+    displayName: profile?.displayName ?? null,
+    schoolName: profile?.schoolName ?? null,
     userAgent: navigator.userAgent,
     viewport: `${window.innerWidth}x${window.innerHeight}`,
+    appVersion: __APP_VERSION__,
     createdAt: new Date().toISOString(),
     status: 'new',
   });

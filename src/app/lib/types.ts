@@ -83,10 +83,16 @@ export interface BugReport {
   id: string;
   teacherId: string;
   teacherEmail: string | null;
+  displayName: string | null;
+  schoolName: string | null;
   category: 'bug' | 'feature-request' | 'other';
   description: string;
+  /** Human-readable trail of the last few screens visited, e.g. "Add Observation -> Select Class -> Settings". */
+  screenTrail: string;
   userAgent: string;
   viewport: string;
+  /** Short git commit SHA of the build that filed this report - see vite.config.ts. */
+  appVersion: string;
   createdAt: string;
   status: 'new' | 'reviewed' | 'resolved';
 }
