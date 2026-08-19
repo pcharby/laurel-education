@@ -10,7 +10,8 @@
       <meta name="robots" content="noindex, nofollow" />
       <link rel="icon" type="image/png" href="/favicon.png" />
       <meta name="theme-color" content="#1A1A40" />
-      <!-- vite-plugin-pwa injects the manifest link and service worker registration at build time. -->
+      <!-- vite-plugin-pwa injects the manifest link at build time. Service worker
+           registration is manual - see src/registerSW.ts. -->
       <!-- iOS Safari ignores most of the web manifest for "Add to Home Screen" - these cover it directly. -->
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       <meta name="apple-mobile-web-app-capable" content="yes" />

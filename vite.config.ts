@@ -37,6 +37,13 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registered manually in src/registerSW.ts instead - the default
+      // auto-injected registration activates a new service worker in the
+      // background but never reloads pages that are already open, so a
+      // returning visitor can silently run stale JS for an entire session
+      // after a deploy. The manual registration reloads once a new version
+      // is ready instead.
+      injectRegister: false,
       // Service worker only in real builds - a dev-mode SW just adds a
       // stale-cache footgun with no benefit while iterating.
       devOptions: { enabled: false },
