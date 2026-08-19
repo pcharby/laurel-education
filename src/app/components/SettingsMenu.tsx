@@ -1,6 +1,6 @@
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Lock, BookOpen, Calendar, Bug, School, Building2 } from 'lucide-react';
+import { ArrowLeft, Lock, BookOpen, Calendar, Bug, School, Building2, Download } from 'lucide-react';
 import { LaurelLogo } from './LaurelLogo';
 import { useSchoolName } from '../lib/useSchoolName';
 
@@ -8,13 +8,14 @@ interface SettingsMenuProps {
   onBack: () => void;
   onClassesAndSubjects: () => void;
   onCurriculum: () => void;
+  onInstallApp: () => void;
   onPasswordManagement: () => void;
   onReportProblem: () => void;
   onSchoolProfile: () => void;
   onSchools: () => void;
 }
 
-export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPasswordManagement, onReportProblem, onSchoolProfile, onSchools }: SettingsMenuProps) {
+export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onInstallApp, onPasswordManagement, onReportProblem, onSchoolProfile, onSchools }: SettingsMenuProps) {
   const { schoolName, badgeLetter } = useSchoolName();
   const settingsOptions = [
     {
@@ -51,6 +52,13 @@ export function SettingsMenu({ onBack, onClassesAndSubjects, onCurriculum, onPas
       description: 'Update your password or delete your account',
       color: '#767F93',
       onClick: onPasswordManagement,
+    },
+    {
+      icon: Download,
+      title: 'Install the App',
+      description: 'Get one-tap access from your home screen or dock',
+      color: '#2E7D5B',
+      onClick: onInstallApp,
     },
     {
       icon: Bug,

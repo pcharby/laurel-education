@@ -18,6 +18,7 @@ import { ClassesAndSubjectsConfig } from './components/ClassesAndSubjectsConfig'
 import { CurriculumConfig } from './components/CurriculumConfig';
 import { PasswordManagement } from './components/PasswordManagement';
 import { ReportProblem } from './components/ReportProblem';
+import { InstallApp } from './components/InstallApp';
 import { SchoolProfile } from './components/SchoolProfile';
 import { SchoolsConfig } from './components/SchoolsConfig';
 import { AddObservationDialog } from './components/AddObservationDialog';
@@ -42,6 +43,7 @@ type View =
   | 'curriculum'
   | 'password-management'
   | 'report-problem'
+  | 'install-app'
   | 'school-profile'
   | 'schools';
 
@@ -63,6 +65,7 @@ const VIEW_LABELS: Record<View, string> = {
   curriculum: 'Curriculum',
   'password-management': 'Password Management',
   'report-problem': 'Report a Problem',
+  'install-app': 'Install the App',
   'school-profile': 'School Profile',
   schools: 'Schools',
 };
@@ -110,6 +113,20 @@ export default function App() {
       toast.error('Could not start the demo. Please try again.');
     }
   };
+
+  // A shareable /demo link (e.g. for outreach, a website, an email
+  // signature) that drops a visitor straight into the demo, skipping the
+  // login screen entirely. Only fires once authUser is confirmed null (not
+  // the initial "still checking" undefined) and only ever once per load -
+  // never re-triggers, and never overrides someone who's already signed in
+  // to a real account.
+  useEffect(() => {
+    if (authUser !== null) return;
+    if (window.location.pathname !== '/demo') return;
+    window.history.replaceState({}, '', '/');
+    handleDemo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser]);
 
   const handleSelectClass = (classInfo: SchoolClass) => {
     setSelectedClass(classInfo);
@@ -236,6 +253,14 @@ export default function App() {
     goTo('settings');
   };
 
+  const handleInstallApp = () => {
+    goTo('install-app');
+  };
+
+  const handleBackFromInstallApp = () => {
+    goTo('settings');
+  };
+
   const handleSchoolProfile = () => {
     goTo('school-profile');
   };
@@ -355,6 +380,7 @@ export default function App() {
           onBack={handleBackFromSettings}
           onClassesAndSubjects={handleClassesAndSubjects}
           onCurriculum={handleCurriculum}
+          onInstallApp={handleInstallApp}
           onPasswordManagement={handlePasswordManagement}
           onReportProblem={handleReportProblem}
           onSchoolProfile={handleSchoolProfile}
@@ -392,6 +418,10 @@ export default function App() {
             .map((v) => VIEW_LABELS[v])
             .join(' -> ')}
         />
+      )}
+
+      {view === 'install-app' && (
+        <InstallApp onBack={handleBackFromInstallApp} />
       )}
 
       {view === 'report-generation' && selectedStudent && (
